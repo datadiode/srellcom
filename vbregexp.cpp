@@ -10,6 +10,7 @@
  */
 
 #include <windows.h>
+#include <vld.h>
 #define RE_PREFIX srell
 #include "srell.hpp"
 #include "vbsregexp55_h.h"
@@ -324,6 +325,7 @@ ULONG STDMETHODCALLTYPE SubMatchesEnum::Release()
     LONG const ref = InterlockedDecrement(&this->ref);
     TRACE("(%p) ref=%ld\n", this, ref);
     if (!ref) {
+        sm->Release();
         delete this;
     }
     return ref;
@@ -568,6 +570,7 @@ ULONG STDMETHODCALLTYPE Match2::Release()
     LONG const ref = InterlockedDecrement(&this->ref);
     TRACE("(%p) ref=%ld\n", this, ref);
     if (!ref) {
+        sub_matches->Release();
         delete this;
     }
     return ref;
@@ -708,6 +711,7 @@ ULONG STDMETHODCALLTYPE MatchCollectionEnum::Release()
     LONG const ref = InterlockedDecrement(&this->ref);
     TRACE("(%p) ref=%ld\n", this, ref);
     if (!ref) {
+        mc->Release();
         delete this;
     }
     return ref;
@@ -1404,6 +1408,9 @@ BOOL APIENTRY DllMain(HANDLE module, DWORD reason, void *)
 {
     if (reason == DLL_PROCESS_ATTACH) {
         g_module = reinterpret_cast<HMODULE>(module);
+#ifdef _DEBUG
+        strdup("INTENDEDMEMLEAK");
+#endif
     }
     return TRUE;
 }
