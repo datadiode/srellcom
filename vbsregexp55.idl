@@ -1,0 +1,274 @@
+/*
+ * Modified from https://github.com/Gcenx/winecx's vbsregexp55.idl
+ *
+ * Copyright 2013 Piotr Caban for CodeWeavers
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ */
+
+import "oaidl.idl";
+
+#define DISPID_SUBMATCHES_COUNT                 1
+
+#define DISPID_MATCHCOLLECTION_COUNT            1
+
+#define DISPID_MATCH_FIRSTINDEX                 10001
+#define DISPID_MATCH_LENGTH                     10002
+#define DISPID_MATCH_SUBMATCHES                 10003
+
+#define DISPID_REGEXP_PATTERN                   10001
+#define DISPID_REGEXP_IGNORECASE                10002
+#define DISPID_REGEXP_GLOBAL                    10003
+#define DISPID_REGEXP_EXECUTE                   10004
+#define DISPID_REGEXP_TEST                      10005
+#define DISPID_REGEXP_REPLACE                   10006
+#define DISPID_REGEXP_MULTILINE                 10007
+
+[
+    helpstring("Microsoft VBScript Regular Expressions 5.5"),
+    uuid(3f4daca7-81dc-11e1-b0c4-0800200c9a66),
+    version(5.5)
+]
+library VBScript_RegExp_55
+{
+    importlib("stdole2.tlb");
+
+    [
+        dual,
+        hidden,
+        nonextensible,
+        odl,
+        oleautomation,
+        uuid(3f4daca0-81dc-11e1-b0c4-0800200c9a66),
+    ]
+    interface IRegExp : IDispatch
+    {
+        [id(DISPID_REGEXP_PATTERN), propget]
+        HRESULT Pattern([out, retval] BSTR *pPattern);
+
+        [id(DISPID_REGEXP_PATTERN), propput]
+        HRESULT Pattern([in] BSTR pPattern);
+
+        [id(DISPID_REGEXP_IGNORECASE), propget]
+        HRESULT IgnoreCase([out, retval] VARIANT_BOOL *pIgnoreCase);
+
+        [id(DISPID_REGEXP_IGNORECASE), propput]
+        HRESULT IgnoreCase([in] VARIANT_BOOL pIgnoreCase);
+
+        [id(DISPID_REGEXP_GLOBAL), propget]
+        HRESULT Global([out, retval] VARIANT_BOOL *pGlobal);
+
+        [id(DISPID_REGEXP_GLOBAL), propput]
+        HRESULT Global([in] VARIANT_BOOL pGlobal);
+
+        [id(DISPID_REGEXP_EXECUTE)]
+        HRESULT Execute(
+                [in] BSTR sourceString,
+                [out, retval] IDispatch **ppMatches);
+
+        [id(DISPID_REGEXP_TEST)]
+        HRESULT Test(
+                [in] BSTR sourceString,
+                [out, retval] VARIANT_BOOL *pMatch);
+
+        [id(DISPID_REGEXP_REPLACE)]
+        HRESULT Replace(
+                [in] BSTR sourceString,
+                [in] BSTR replaceString,
+                [out, retval] BSTR *pDestString);
+    }
+
+    [
+        dual,
+        hidden,
+        nonextensible,
+        odl,
+        oleautomation,
+        uuid(3f4dacb0-81dc-11e1-b0c4-0800200c9a66)
+    ]
+    interface IRegExp2 : IDispatch
+    {
+        [id(DISPID_REGEXP_PATTERN), propget]
+        HRESULT Pattern([out, retval] BSTR *pPattern);
+
+        [id(DISPID_REGEXP_PATTERN), propput]
+        HRESULT Pattern([in] BSTR pPattern);
+
+        [id(DISPID_REGEXP_IGNORECASE), propget]
+        HRESULT IgnoreCase([out, retval] VARIANT_BOOL *pIgnoreCase);
+
+        [id(DISPID_REGEXP_IGNORECASE), propput]
+        HRESULT IgnoreCase([in] VARIANT_BOOL pIgnoreCase);
+
+        [id(DISPID_REGEXP_GLOBAL), propget]
+        HRESULT Global([out, retval] VARIANT_BOOL *pGlobal);
+
+        [id(DISPID_REGEXP_GLOBAL), propput]
+        HRESULT Global([in] VARIANT_BOOL pGlobal);
+
+        [id(DISPID_REGEXP_MULTILINE), propget]
+        HRESULT Multiline([out, retval] VARIANT_BOOL *pMultiline);
+
+        [id(DISPID_REGEXP_MULTILINE), propput]
+        HRESULT Multiline([in] VARIANT_BOOL pMultiline);
+
+        [id(DISPID_REGEXP_EXECUTE)]
+        HRESULT Execute(
+                [in] BSTR sourceString,
+                [out, retval] IDispatch **ppMatches);
+
+        [id(DISPID_REGEXP_TEST)]
+        HRESULT Test(
+                [in] BSTR sourceString,
+                [out, retval] VARIANT_BOOL *pMatch);
+
+        [id(DISPID_REGEXP_REPLACE)]
+        HRESULT Replace(
+                [in] BSTR sourceString,
+                [in] VARIANT replaceVar,
+                [out, retval] BSTR *pDestString);
+    }
+
+    [
+        dual,
+        hidden,
+        nonextensible,
+        odl,
+        oleautomation,
+        uuid(3f4daca1-81dc-11e1-b0c4-0800200c9a66)
+    ]
+    interface IMatch : IDispatch
+    {
+        [id(DISPID_VALUE), propget]
+        HRESULT Value([out, retval] BSTR *pValue);
+
+        [id(DISPID_MATCH_FIRSTINDEX), propget]
+        HRESULT FirstIndex([out, retval] LONG *pFirstIndex);
+
+        [id(DISPID_MATCH_LENGTH), propget]
+        HRESULT Length([out, retval] LONG *pLength);
+    }
+
+    [
+        odl,
+        uuid(3f4dacb1-81dc-11e1-b0c4-0800200c9a66),
+        hidden,
+        dual,
+        nonextensible,
+        oleautomation
+    ]
+    interface IMatch2 : IDispatch
+    {
+        [id(DISPID_VALUE), propget]
+        HRESULT Value([out, retval] BSTR *pValue);
+
+        [id(DISPID_MATCH_FIRSTINDEX), propget]
+        HRESULT FirstIndex([out, retval] LONG *pFirstIndex);
+
+        [id(DISPID_MATCH_LENGTH), propget]
+        HRESULT Length([out, retval] LONG *pLength);
+
+        [id(DISPID_MATCH_SUBMATCHES), propget]
+        HRESULT SubMatches([out, retval] IDispatch **ppSubMatches);
+    }
+
+    [
+        dual,
+        hidden,
+        nonextensible,
+        odl,
+        oleautomation,
+        uuid(3f4daca2-81dc-11e1-b0c4-0800200c9a66)
+    ]
+    interface IMatchCollection : IDispatch
+    {
+        [id(DISPID_VALUE), propget]
+        HRESULT Item(
+                [in] LONG index,
+                [out, retval] IDispatch **ppMatch);
+
+        [id(DISPID_MATCHCOLLECTION_COUNT), propget]
+        HRESULT Count([out, retval] LONG *pCount);
+
+        [id(DISPID_NEWENUM), propget]
+        HRESULT _NewEnum([out, retval] IUnknown **ppEnum);
+    }
+
+    [
+        dual,
+        hidden,
+        nonextensible,
+        odl,
+        oleautomation,
+        uuid(3f4dacb2-81dc-11e1-b0c4-0800200c9a66)
+    ]
+    interface IMatchCollection2 : IDispatch
+    {
+        [id(DISPID_VALUE), propget]
+        HRESULT Item(
+                [in] LONG index,
+                [out, retval] IDispatch **ppMatch);
+
+        [id(DISPID_MATCHCOLLECTION_COUNT), propget]
+        HRESULT Count([out, retval] LONG *pCount);
+
+        [id(DISPID_NEWENUM), propget]
+        HRESULT _NewEnum([out, retval] IUnknown **ppEnum);
+    }
+
+    [
+        dual,
+        hidden,
+        nonextensible,
+        odl,
+        oleautomation,
+        uuid(3f4dacb3-81dc-11e1-b0c4-0800200c9a66)
+    ]
+    interface ISubMatches : IDispatch
+    {
+        [id(DISPID_VALUE), propget]
+        HRESULT Item(
+                [in] LONG index,
+                [out, retval] VARIANT *pSubMatch);
+
+        [id(DISPID_SUBMATCHES_COUNT), propget]
+        HRESULT Count([out, retval] LONG *pCount);
+
+        [id(DISPID_NEWENUM), propget]
+        HRESULT _NewEnum([out, retval] IUnknown **ppEnum);
+    }
+
+    [
+        uuid(3f4daca4-81dc-11e1-b0c4-0800200c9a66)
+    ]
+    coclass RegExp
+    {
+        [default] interface IRegExp2;
+    }
+
+    [
+        noncreatable,
+        uuid(3f4daca5-81dc-11e1-b0c4-0800200c9a66)
+    ]
+    coclass Match
+    {
+        [default] interface IMatch2;
+    }
+
+    [
+        noncreatable,
+        uuid(3f4daca6-81dc-11e1-b0c4-0800200c9a66)
+    ]
+    coclass MatchCollection
+    {
+        [default] interface IMatchCollection2;
+    }
+
+    [
+        noncreatable,
+        uuid(3f4dacc0-81dc-11e1-b0c4-0800200c9a66)
+    ]
+    coclass SubMatches {
+        [default] interface ISubMatches;
+    }
+}

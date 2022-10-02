@@ -1,0 +1,9 @@
+;
+;contains the list of functions that are being exported from this DLL
+;
+
+EXPORTS
+                DllGetClassObject   	PRIVATE
+                DllCanUnloadNow     	PRIVATE
+                DllRegisterServer   	PRIVATE
+                DllUnregisterServer 	PRIVATE
