@@ -166,7 +166,6 @@ private:
     LONG ref;
 public:
     DWORD index;
-    std::wstring value;
     SubMatches *sub_matches;
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppv);
@@ -219,6 +218,7 @@ class MatchCollection2
 private:
     LONG ref;
 public:
+    std::wstring source;
     std::vector<IMatch2 *> matches;
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppv);
@@ -620,7 +620,8 @@ HRESULT STDMETHODCALLTYPE Match2::get_Value(BSTR *pValue)
     if (!pValue)
         return E_POINTER;
 
-    *pValue = SysAllocStringLen(value.c_str(), value.length());
+    RE_PREFIX::wcmatch::const_reference sm = sub_matches->result[0];
+    *pValue = SysAllocStringLen(sm.first, sm.second - sm.first);
     return *pValue ? S_OK : E_OUTOFMEMORY;
 }
 
@@ -669,9 +670,7 @@ HRESULT Match2::create(DWORD pos, RE_PREFIX::wcmatch &result, IMatch2 **match)
     if (!ret)
         return E_OUTOFMEMORY;
 
-    RE_PREFIX::wcmatch::const_reference sm = result[0];
     ret->index = pos;
-    ret->value.assign(sm.first, sm.second);
 
     hres = SubMatches::create(result, &ret->sub_matches);
     if (FAILED(hres)) {
@@ -1101,11 +1100,14 @@ HRESULT STDMETHODCALLTYPE RegExp2::Execute(BSTR source, IDispatch **ppMatches)
     if (FAILED(hres))
         return hres;
 
-    const WCHAR *cp = source;
+    match_collection->source = source;
+
+    const WCHAR *const s = match_collection->source.c_str();
+    const WCHAR *cp = s;
     while (RE_PREFIX::regex_search(cp, result, regexp)) {
         const WCHAR *const cq = cp;
         cp += result.position();
-        hres = Match2::create(cp - source, result, &add);
+        hres = Match2::create(cp - s, result, &add);
         cp += result.length();
         if (FAILED(hres))
             break;

@@ -6,7 +6,7 @@
 Option Explicit
 
 Function Test(str, exp, max, expected)
-	Dim re, mr, i, n, placeholder, matched, msg, num_of_failures
+	Dim re, mr, sm, i, n, placeholder, matched, msg, num_of_failures
 	Set re = CreateObject("SRELL.RegExp")
 	re.Pattern = exp
 	For i = 1 To max
@@ -16,10 +16,15 @@ Function Test(str, exp, max, expected)
 	If max > 1 Then WScript.Echo vbTab & max & " times"
 	WScript.Echo vbTab & Replace("Not Found", "Not ", "", 1, mr.Count)
 	If mr.Count <> 0 Then
-		n = mr(0).SubMatches.Count
+		Set sm = mr(0).SubMatches
+		n = sm.Count
 		For i = 0 To n
 			placeholder = Replace("$&", "&", i, 1, i)
-			matched = re.Replace(mr(0), placeholder)
+			If i = 0 Then
+				matched = mr(0)
+			Else
+				matched = sm(i - 1)
+			End If
 			msg = vbTab & placeholder & " = """ & matched & """"
 			If i < UBound(expected) Then
 				if matched = expected(i) Or matched = "" And expected(i) = "(undefined)" Then
@@ -30,6 +35,10 @@ Function Test(str, exp, max, expected)
 				End If
 			Else
 				msg = msg & "; failed..." ' should not exist.
+				num_of_failures = num_of_failures + 1
+			End If
+			If mr(0) <> "" And re.Replace(mr(0), placeholder) <> matched Then
+				msg = msg & "; replace failed..." ' should have yielded same result.
 				num_of_failures = num_of_failures + 1
 			End If
 			WScript.Echo msg
