@@ -49,7 +49,7 @@ Function Test(str, exp, max, expected)
 	End If
 	WScript.Echo Replace("Result: passed.", "passed", "failed", 1, num_of_failures)
 	WScript.Echo
-	Test = CInt(Replace("1", "1", "0", 1, num_of_failures))
+	Test = 1 - Sgn(num_of_failures)
 End Function
 
 Function Main
