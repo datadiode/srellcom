@@ -166,6 +166,7 @@ private:
     LONG ref;
 public:
     DWORD index;
+    std::wstring value;
     SubMatches *sub_matches;
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppv);
@@ -486,9 +487,9 @@ HRESULT STDMETHODCALLTYPE SubMatches::get_Item(LONG index, VARIANT *pSubMatch)
     if (index < 0 || index >= static_cast<LONG>(result.size() - 1))
         return E_INVALIDARG;
 
-    RE_PREFIX::wcmatch::const_reference match = result[index + 1];
+    RE_PREFIX::wcmatch::const_reference sm = result[index + 1];
     V_VT(pSubMatch) = VT_BSTR;
-    V_BSTR(pSubMatch) = SysAllocStringLen(match.first, match.second - match.first);
+    V_BSTR(pSubMatch) = SysAllocStringLen(sm.first, sm.second - sm.first);
 
     if (!V_BSTR(pSubMatch))
         return E_OUTOFMEMORY;
@@ -619,8 +620,7 @@ HRESULT STDMETHODCALLTYPE Match2::get_Value(BSTR *pValue)
     if (!pValue)
         return E_POINTER;
 
-    RE_PREFIX::wcmatch::const_reference match = sub_matches->result[0];
-    *pValue = SysAllocStringLen(match.first, match.second - match.first);
+    *pValue = SysAllocStringLen(value.c_str(), value.length());
     return *pValue ? S_OK : E_OUTOFMEMORY;
 }
 
@@ -669,7 +669,10 @@ HRESULT Match2::create(DWORD pos, RE_PREFIX::wcmatch &result, IMatch2 **match)
     if (!ret)
         return E_OUTOFMEMORY;
 
+    RE_PREFIX::wcmatch::const_reference sm = result[0];
     ret->index = pos;
+    ret->value.assign(sm.first, sm.second);
+
     hres = SubMatches::create(result, &ret->sub_matches);
     if (FAILED(hres)) {
         delete ret;
@@ -1202,10 +1205,10 @@ BOOL StrBuf::ensure_size(unsigned len)
     if (len <= this->size)
         return TRUE;
 
-	DWORD new_size = this->size ? this->size << 1 : 16;
+    DWORD new_size = this->size ? this->size << 1 : 16;
     if (new_size < len)
         new_size = len;
-	WCHAR *new_buf = static_cast<WCHAR *>(CoTaskMemRealloc(this->buf, new_size * sizeof(WCHAR)));
+    WCHAR *new_buf = static_cast<WCHAR *>(CoTaskMemRealloc(this->buf, new_size * sizeof(WCHAR)));
     if (!new_buf)
         return FALSE;
 
@@ -1295,8 +1298,8 @@ HRESULT STDMETHODCALLTYPE RegExp2::Replace(BSTR source, VARIANT replaceVar, BSTR
                     break;
                 }
 
-                RE_PREFIX::wcmatch::const_reference match = result[idx];
-                hres = buf.append(match.first, match.second - match.first);
+                RE_PREFIX::wcmatch::const_reference sm = result[idx];
+                hres = buf.append(sm.first, sm.second - sm.first);
                 break;
             }
             if (FAILED(hres))
@@ -1409,7 +1412,7 @@ BOOL APIENTRY DllMain(HANDLE module, DWORD reason, void *)
     if (reason == DLL_PROCESS_ATTACH) {
         g_module = reinterpret_cast<HMODULE>(module);
 #ifdef _DEBUG
-        strdup("INTENDEDMEMLEAK");
+        _strdup("INTENDEDMEMLEAK");
 #endif
     }
     return TRUE;
