@@ -39,64 +39,16 @@ static inline BOOL is_digit(WCHAR c)
     return '0' <= c && c <= '9';
 }
 
-#define REGEXP_TID_LIST \
-    XDIID(RegExp2), \
-    XDIID(Match2), \
-    XDIID(MatchCollection2), \
-    XDIID(SubMatches)
-
-typedef enum {
-#define XDIID(iface) iface ## _tid
-    REGEXP_TID_LIST,
-#undef XDIID
-    REGEXP_LAST_tid
-} regexp_tid_t;
-
-static IID tid_ids[] = {
-#define XDIID(iface) IID_I ## iface
-    REGEXP_TID_LIST
-#undef XDIID
-};
+// Silly macro to apply the double-checked-lock pattern to some piece of code
+// Copyright (c) datadiode
+// SPDX-License-Identifier: MIT
+#define init_once \
+    for (static LONG volatile static_init_once = 0;;) \
+    if (LONG init_once = InterlockedCompareExchange(&static_init_once, 1, 0)) \
+    { if (init_once == 3) break; Sleep(10); } \
+    else while (InterlockedIncrement(&static_init_once) == 2)
 
 HMODULE g_module = NULL;
-
-static ITypeLib *typelib;
-static ITypeInfo *typeinfos[REGEXP_LAST_tid];
-
-static HRESULT init_regexp_typeinfo(regexp_tid_t tid)
-{
-    HRESULT hres;
-
-    if (!typelib) {
-        ITypeLib *tl;
-
-        WCHAR szFileName[MAX_PATH];
-        GetModuleFileNameW(g_module, szFileName, MAX_PATH);
-        hres = LoadTypeLib(szFileName, &tl);
-        if (FAILED(hres)) {
-            ERR("LoadRegTypeLib failed: %08lx\n", hres);
-            return hres;
-        }
-
-        if (InterlockedCompareExchangePointer(reinterpret_cast<void **>(&typelib), tl, NULL))
-            tl->Release();
-    }
-
-    if (!typeinfos[tid]) {
-        ITypeInfo *ti;
-
-        hres = typelib->GetTypeInfoOfGuid(tid_ids[tid], &ti);
-        if (FAILED(hres)) {
-            ERR("GetTypeInfoOfGuid(%s) failed: %08lx\n", debugstr_guid(tid_ids[tid]), hres);
-            return hres;
-        }
-
-        if (InterlockedCompareExchangePointer(reinterpret_cast<void **>(typeinfos + tid), ti, NULL))
-            ti->Release();
-    }
-
-    return S_OK;
-}
 
 template<class Self>
 class ZeroInit
@@ -154,6 +106,7 @@ public:
     HRESULT STDMETHODCALLTYPE get_Count(LONG *pCount);
     HRESULT STDMETHODCALLTYPE get__NewEnum(IUnknown **ppEnum);
 
+    static ITypeInfo *typeinfo;
     static HRESULT create(RE_PREFIX::wcmatch &result, SubMatches **sub_matches);
 };
 
@@ -185,6 +138,7 @@ public:
     HRESULT STDMETHODCALLTYPE get_Length(LONG *pLength);
     HRESULT STDMETHODCALLTYPE get_SubMatches(IDispatch **ppSubMatches);
 
+    static ITypeInfo *typeinfo;
     static HRESULT create(DWORD pos, RE_PREFIX::wcmatch &result, IMatch2 **match);
 };
 
@@ -237,6 +191,7 @@ public:
     HRESULT STDMETHODCALLTYPE get_Count(LONG *pCount);
     HRESULT STDMETHODCALLTYPE get__NewEnum(IUnknown **ppEnum);
 
+    static ITypeInfo *typeinfo;
     static HRESULT create(MatchCollection2 **match_collection);
 };
 
@@ -279,6 +234,7 @@ public:
     HRESULT STDMETHODCALLTYPE Replace(BSTR source, VARIANT replaceVar, BSTR *pDestString);
     HRESULT STDMETHODCALLTYPE Replace(BSTR source, BSTR replace, BSTR *pDestString);
 
+    static ITypeInfo *typeinfo;
     static HRESULT create(IDispatch **ret);
 
 private:
@@ -287,6 +243,8 @@ private:
 
 static class RegExp2Factory : public IClassFactory
 {
+private:
+    static ITypeLib *typelib;
 public:
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, void **);
     ULONG STDMETHODCALLTYPE AddRef();
@@ -453,7 +411,7 @@ HRESULT STDMETHODCALLTYPE SubMatches::GetTypeInfo(UINT iTInfo, LCID lcid, ITypeI
     TRACE("(%p)->(%u %lu %p)\n", this, iTInfo, lcid, ppTInfo);
     if (iTInfo != 0)
         return DISP_E_BADINDEX;
-    (*ppTInfo = typeinfos[SubMatches_tid])->AddRef();
+    (*ppTInfo = typeinfo)->AddRef();
     return S_OK;
 }
 
@@ -463,7 +421,7 @@ HRESULT STDMETHODCALLTYPE SubMatches::GetIDsOfNames(
     TRACE("(%p)->(%s %p %u %lu %p)\n", this, debugstr_guid(riid),
           rgszNames, cNames, lcid, rgDispId);
 
-    return typeinfos[SubMatches_tid]->GetIDsOfNames(rgszNames, cNames, rgDispId);
+    return typeinfo->GetIDsOfNames(rgszNames, cNames, rgDispId);
 }
 
 HRESULT STDMETHODCALLTYPE SubMatches::Invoke(DISPID dispIdMember,
@@ -473,8 +431,8 @@ HRESULT STDMETHODCALLTYPE SubMatches::Invoke(DISPID dispIdMember,
     TRACE("(%p)->(%ld %s %ld %d %p %p %p %p)\n", this, dispIdMember, debugstr_guid(riid),
           lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
 
-    return typeinfos[SubMatches_tid]->Invoke(this, dispIdMember, wFlags,
-            pDispParams, pVarResult, pExcepInfo, puArgErr);
+    return typeinfo->Invoke(this, dispIdMember, wFlags,
+                            pDispParams, pVarResult, pExcepInfo, puArgErr);
 }
 
 HRESULT STDMETHODCALLTYPE SubMatches::get_Item(LONG index, VARIANT *pSubMatch)
@@ -518,12 +476,10 @@ HRESULT STDMETHODCALLTYPE SubMatches::get__NewEnum(IUnknown **ppEnum)
     return SubMatchesEnum::create(this, ppEnum);
 }
 
+ITypeInfo *SubMatches::typeinfo = NULL;
+
 HRESULT SubMatches::create(RE_PREFIX::wcmatch &result, SubMatches **sub_matches)
 {
-    HRESULT hres = init_regexp_typeinfo(SubMatches_tid);
-    if (FAILED(hres))
-        return hres;
-
     SubMatches *ret = new(std::nothrow) SubMatches;
     if (!ret)
         return E_OUTOFMEMORY;
@@ -532,7 +488,7 @@ HRESULT SubMatches::create(RE_PREFIX::wcmatch &result, SubMatches **sub_matches)
 
     ret->ref = 1;
     *sub_matches = ret;
-    return hres;
+    return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE Match2::QueryInterface(REFIID riid, void **ppv)
@@ -589,7 +545,7 @@ HRESULT STDMETHODCALLTYPE Match2::GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo 
     TRACE("(%p)->(%u %lu %p)\n", this, iTInfo, lcid, ppTInfo);
     if (iTInfo != 0)
         return DISP_E_BADINDEX;
-    (*ppTInfo = typeinfos[Match2_tid])->AddRef();
+    (*ppTInfo = typeinfo)->AddRef();
     return S_OK;
 }
 
@@ -599,7 +555,7 @@ HRESULT STDMETHODCALLTYPE Match2::GetIDsOfNames(
     TRACE("(%p)->(%s %p %u %lu %p)\n", this, debugstr_guid(riid),
           rgszNames, cNames, lcid, rgDispId);
 
-    return typeinfos[Match2_tid]->GetIDsOfNames(rgszNames, cNames, rgDispId);
+    return typeinfo->GetIDsOfNames(rgszNames, cNames, rgDispId);
 }
 
 HRESULT STDMETHODCALLTYPE Match2::Invoke(DISPID dispIdMember,
@@ -609,8 +565,8 @@ HRESULT STDMETHODCALLTYPE Match2::Invoke(DISPID dispIdMember,
     TRACE("(%p)->(%ld %s %ld %d %p %p %p %p)\n", this, dispIdMember, debugstr_guid(riid),
           lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
 
-    return typeinfos[Match2_tid]->Invoke(static_cast<IMatch2 *>(this), dispIdMember, wFlags,
-                                         pDispParams, pVarResult, pExcepInfo, puArgErr);
+    return typeinfo->Invoke(static_cast<IMatch2 *>(this), dispIdMember, wFlags,
+                            pDispParams, pVarResult, pExcepInfo, puArgErr);
 }
 
 HRESULT STDMETHODCALLTYPE Match2::get_Value(BSTR *pValue)
@@ -660,19 +616,17 @@ HRESULT STDMETHODCALLTYPE Match2::get_SubMatches(IDispatch **ppSubMatches)
     return S_OK;
 }
 
+ITypeInfo *Match2::typeinfo = NULL;
+
 HRESULT Match2::create(DWORD pos, RE_PREFIX::wcmatch &result, IMatch2 **match)
 {
-    HRESULT hres = init_regexp_typeinfo(Match2_tid);
-    if (FAILED(hres))
-        return hres;
-
     Match2 *ret = new(std::nothrow) Match2;
     if (!ret)
         return E_OUTOFMEMORY;
 
     ret->index = pos;
 
-    hres = SubMatches::create(result, &ret->sub_matches);
+    HRESULT hres = SubMatches::create(result, &ret->sub_matches);
     if (FAILED(hres)) {
         delete ret;
         return hres;
@@ -846,7 +800,7 @@ HRESULT STDMETHODCALLTYPE MatchCollection2::GetTypeInfo(UINT iTInfo, LCID lcid, 
     TRACE("(%p)->(%u %lu %p)\n", this, iTInfo, lcid, ppTInfo);
     if (iTInfo != 0)
         return DISP_E_BADINDEX;
-    (*ppTInfo = typeinfos[MatchCollection2_tid])->AddRef();
+    (*ppTInfo = typeinfo)->AddRef();
     return S_OK;
 }
 
@@ -856,7 +810,7 @@ HRESULT STDMETHODCALLTYPE MatchCollection2::GetIDsOfNames(
     TRACE("(%p)->(%s %p %u %lu %p)\n", this, debugstr_guid(riid),
           rgszNames, cNames, lcid, rgDispId);
 
-    return typeinfos[MatchCollection2_tid]->GetIDsOfNames(rgszNames, cNames, rgDispId);
+    return typeinfo->GetIDsOfNames(rgszNames, cNames, rgDispId);
 }
 
 HRESULT STDMETHODCALLTYPE MatchCollection2::Invoke(DISPID dispIdMember,
@@ -866,8 +820,8 @@ HRESULT STDMETHODCALLTYPE MatchCollection2::Invoke(DISPID dispIdMember,
     TRACE("(%p)->(%ld %s %ld %d %p %p %p %p)\n", this, dispIdMember, debugstr_guid(riid),
           lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
 
-    return typeinfos[MatchCollection2_tid]->Invoke(static_cast<IMatchCollection2 *>(this), dispIdMember, wFlags,
-            pDispParams, pVarResult, pExcepInfo, puArgErr);
+    return typeinfo->Invoke(static_cast<IMatchCollection2 *>(this), dispIdMember, wFlags,
+                            pDispParams, pVarResult, pExcepInfo, puArgErr);
 }
 
 HRESULT STDMETHODCALLTYPE MatchCollection2::get_Item(LONG index, IDispatch **ppMatch)
@@ -906,12 +860,10 @@ HRESULT STDMETHODCALLTYPE MatchCollection2::get__NewEnum(IUnknown **ppEnum)
     return MatchCollectionEnum::create(this, ppEnum);
 }
 
+ITypeInfo *MatchCollection2::typeinfo = NULL;
+
 HRESULT MatchCollection2::create(MatchCollection2 **match_collection)
 {
-    HRESULT hres = init_regexp_typeinfo(MatchCollection2_tid);
-    if (FAILED(hres))
-        return hres;
-
     MatchCollection2 *ret = new(std::nothrow) MatchCollection2;
     if (!ret)
         return E_OUTOFMEMORY;
@@ -974,7 +926,7 @@ HRESULT STDMETHODCALLTYPE RegExp2::GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo
     TRACE("(%p)->(%u %lu %p)\n", this, iTInfo, lcid, ppTInfo);
     if (iTInfo != 0)
         return DISP_E_BADINDEX;
-    (*ppTInfo = typeinfos[RegExp2_tid])->AddRef();
+    (*ppTInfo = typeinfo)->AddRef();
     return S_OK;
 }
 
@@ -984,7 +936,7 @@ HRESULT STDMETHODCALLTYPE RegExp2::GetIDsOfNames(
     TRACE("(%p)->(%s %p %u %lu %p)\n", this, debugstr_guid(riid),
           rgszNames, cNames, lcid, rgDispId);
 
-    return typeinfos[RegExp2_tid]->GetIDsOfNames(rgszNames, cNames, rgDispId);
+    return typeinfo->GetIDsOfNames(rgszNames, cNames, rgDispId);
 }
 
 HRESULT STDMETHODCALLTYPE RegExp2::Invoke(DISPID dispIdMember,
@@ -994,8 +946,8 @@ HRESULT STDMETHODCALLTYPE RegExp2::Invoke(DISPID dispIdMember,
     TRACE("(%p)->(%ld %s %ld %d %p %p %p %p)\n", this, dispIdMember, debugstr_guid(riid),
           lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
 
-    return typeinfos[RegExp2_tid]->Invoke(static_cast<RegExp2 *>(this), dispIdMember, wFlags,
-                                          pDispParams, pVarResult, pExcepInfo, puArgErr);
+    return typeinfo->Invoke(static_cast<RegExp2 *>(this), dispIdMember, wFlags,
+                            pDispParams, pVarResult, pExcepInfo, puArgErr);
 }
 
 HRESULT STDMETHODCALLTYPE RegExp2::get_Pattern(BSTR *pPattern)
@@ -1349,12 +1301,10 @@ void RegExp2::update()
     }
 }
 
+ITypeInfo *RegExp2::typeinfo = NULL;
+
 HRESULT RegExp2::create(IDispatch **ret)
 {
-    HRESULT hres = init_regexp_typeinfo(RegExp2_tid);
-    if (FAILED(hres))
-        return hres;
-
     RegExp2 *regexp = new(std::nothrow) RegExp2;
     if (!regexp)
         return E_OUTOFMEMORY;
@@ -1365,6 +1315,8 @@ HRESULT RegExp2::create(IDispatch **ret)
     *ret = static_cast<IRegExp2 *>(regexp);
     return S_OK;
 }
+
+ITypeLib *RegExp2Factory::typelib = NULL;
 
 HRESULT STDMETHODCALLTYPE RegExp2Factory::QueryInterface(REFIID riid, void **ppv)
 {
@@ -1393,6 +1345,21 @@ HRESULT STDMETHODCALLTYPE RegExp2Factory::CreateInstance(IUnknown *pUnkOuter, RE
 
     if (pUnkOuter != NULL)
         return CLASS_E_NOAGGREGATION;
+
+    static HRESULT hres_once = S_OK;
+
+    init_once {
+        WCHAR szFileName[MAX_PATH];
+        GetModuleFileNameW(g_module, szFileName, MAX_PATH);
+        if (FAILED(hres_once = LoadTypeLib(szFileName, &typelib))) continue;
+        if (FAILED(hres_once = typelib->GetTypeInfoOfGuid(IID_IRegExp2, &RegExp2::typeinfo))) continue;
+        if (FAILED(hres_once = typelib->GetTypeInfoOfGuid(IID_IMatch2, &Match2::typeinfo))) continue;
+        if (FAILED(hres_once = typelib->GetTypeInfoOfGuid(IID_IMatchCollection2, &MatchCollection2::typeinfo))) continue;
+        if (FAILED(hres_once = typelib->GetTypeInfoOfGuid(IID_ISubMatches, &SubMatches::typeinfo))) continue;
+    }
+
+    if (FAILED(hres_once))
+        return hres_once;
 
     IDispatch *regexp;
     HRESULT hres = RegExp2::create(&regexp);
