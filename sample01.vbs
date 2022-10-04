@@ -5,9 +5,12 @@
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 Option Explicit
 
+Dim RegExpClass
+RegExpClass = Replace("SRELL.RegExp", "SRELL", "VBScript", 1, WScript.Arguments.Named("builtin-regexp"))
+
 Function Test(str, exp, max, expected)
 	Dim re, mr, sm, i, n, placeholder, matched, msg, num_of_failures
-	Set re = CreateObject("SRELL.RegExp")
+	Set re = CreateObject(RegExpClass)
 	re.Pattern = exp
 	For i = 1 To max
 		Set mr = re.Execute(str)
@@ -56,7 +59,10 @@ Function Main
 	Dim str, exp, expected
 	Dim num_of_tests
 	Dim num_of_tests_passed
-	
+
+	WScript.Echo "RegExpClass = " & RegExpClass
+	WScript.Echo
+
 	WScript.Echo "Test 1 (ECMAScript 2021 Language Specification 22.2.2.3, NOTE)"
 	str = "abc"
 	exp = "((a)|(ab))((c)|(bc))"
