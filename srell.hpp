@@ -18262,8 +18262,8 @@ private:
 												inspos -= 2;
 											}
 
-											ins_bt.insert(inspos, dstpos);
-											ins_bt.insert(inspos, srcpos);
+											ins_bt.insert(inspos, static_cast<uchar32>(dstpos));
+											ins_bt.insert(inspos, static_cast<uchar32>(srcpos));
 										}
 									}
 									else if (dstref.type == st_character && srcref.character != dstref.character)
@@ -18272,7 +18272,7 @@ private:
 										{
 											piece[srcpos].next2 = static_cast<std::ptrdiff_t>(dstpos - srcpos);
 											dstref.quantifier.is_greedy = false;
-											dstref.quantifier.atmost = srcpos;
+											dstref.quantifier.atmost = static_cast<uchar32>(srcpos);
 										}
 										modified = true;
 									}

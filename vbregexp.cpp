@@ -418,7 +418,7 @@ HRESULT STDMETHODCALLTYPE SubMatches::get_Item(LONG index, VARIANT *pSubMatch)
 
     RE_PREFIX::wcmatch::const_reference sm = result[index + 1];
     V_VT(pSubMatch) = VT_BSTR;
-    V_BSTR(pSubMatch) = SysAllocStringLen(sm.first, sm.second - sm.first);
+    V_BSTR(pSubMatch) = SysAllocStringLen(sm.first, static_cast<UINT>(sm.second - sm.first));
 
     if (!V_BSTR(pSubMatch))
         return E_OUTOFMEMORY;
@@ -433,7 +433,7 @@ HRESULT STDMETHODCALLTYPE SubMatches::get_Count(LONG *pCount)
     if (!pCount)
         return E_POINTER;
 
-    *pCount = result.size() - 1;
+    *pCount = static_cast<LONG>(result.size() - 1);
     return S_OK;
 }
 
@@ -512,7 +512,7 @@ HRESULT STDMETHODCALLTYPE Match2::get_Value(BSTR *pValue)
         return E_POINTER;
 
     RE_PREFIX::wcmatch::const_reference sm = sub_matches->result[0];
-    *pValue = SysAllocStringLen(sm.first, sm.second - sm.first);
+    *pValue = SysAllocStringLen(sm.first, static_cast<UINT>(sm.second - sm.first));
     return *pValue ? S_OK : E_OUTOFMEMORY;
 }
 
@@ -534,7 +534,7 @@ HRESULT STDMETHODCALLTYPE Match2::get_Length(LONG *pLength)
     if (!pLength)
         return E_POINTER;
 
-    *pLength = sub_matches->result.size();
+    *pLength = static_cast<LONG>(sub_matches->result.size());
 
     return S_OK;
 }
@@ -748,7 +748,7 @@ HRESULT STDMETHODCALLTYPE MatchCollection2::get_Count(LONG *pCount)
     if (!pCount)
         return E_POINTER;
 
-    *pCount = matches.size();
+    *pCount = static_cast<LONG>(matches.size());
     return S_OK;
 }
 
@@ -926,7 +926,7 @@ HRESULT STDMETHODCALLTYPE RegExp2::Execute(BSTR source, IDispatch **ppMatches)
     while (RE_PREFIX::regex_search(cp, result, regexp)) {
         const WCHAR *const cq = cp;
         cp += result.position();
-        hres = Match2::create(cp - s, result, &add);
+        hres = Match2::create(static_cast<DWORD>(cp - s), result, &add);
         cp += result.length();
         if (FAILED(hres))
             break;
@@ -1003,12 +1003,12 @@ class StrBuf
 public:
     ~StrBuf();
     BSTR bstr() const;
-    BOOL ensure_size(unsigned len);
-    HRESULT append(const WCHAR *str, DWORD len);
+    BOOL ensure_size(SIZE_T len);
+    HRESULT append(const WCHAR *str, SIZE_T len);
 private:
     WCHAR *buf;
-    DWORD size;
-    DWORD len;
+    SIZE_T size;
+    SIZE_T len;
 };
 
 StrBuf::~StrBuf()
@@ -1018,15 +1018,17 @@ StrBuf::~StrBuf()
 
 BSTR StrBuf::bstr() const
 {
-    return SysAllocStringLen(buf, len);
+    if (len > UINT_MAX)
+        return NULL;
+    return SysAllocStringLen(buf, static_cast<UINT>(len));
 }
 
-BOOL StrBuf::ensure_size(unsigned len)
+BOOL StrBuf::ensure_size(SIZE_T len)
 {
     if (len <= this->size)
         return TRUE;
 
-    DWORD new_size = this->size ? this->size << 1 : 16;
+    SIZE_T new_size = this->size ? this->size << 1 : 16;
     if (new_size < len)
         new_size = len;
     WCHAR *new_buf = static_cast<WCHAR *>(CoTaskMemRealloc(this->buf, new_size * sizeof(WCHAR)));
@@ -1038,7 +1040,7 @@ BOOL StrBuf::ensure_size(unsigned len)
     return TRUE;
 }
 
-HRESULT StrBuf::append(const WCHAR *str, DWORD len)
+HRESULT StrBuf::append(const WCHAR *str, SIZE_T len)
 {
     if (!len)
         return S_OK;
@@ -1322,7 +1324,9 @@ STDAPI DllRegisterServer()
         long err = RegCreateKeyW(HKEY_CLASSES_ROOT, pszKeyName, &hkey);
         if (err == ERROR_SUCCESS) {
             if (pszValue) {
-                err = RegSetValueExW(hkey, pszValueName, 0, REG_SZ, (const BYTE *)pszValue, (wcslen(pszValue) + 1) * sizeof(WCHAR));
+                err = RegSetValueExW(hkey, pszValueName, 0,
+                                     REG_SZ, reinterpret_cast<const BYTE *>(pszValue),
+                                     static_cast<DWORD>(wcslen(pszValue) + 1) * sizeof(WCHAR));
             }
             RegCloseKey(hkey);
         }
