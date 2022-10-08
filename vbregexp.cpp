@@ -119,7 +119,7 @@ public:
     HRESULT STDMETHODCALLTYPE Reset();
     HRESULT STDMETHODCALLTYPE Clone(IEnumVARIANT **ppEnum);
 
-    static HRESULT create(ISubMatches *sm, IUnknown **ppEnum);
+    static HRESULT create(ISubMatches *sm, LONG pos, IUnknown **ppEnum);
 };
 
 class SubMatches
@@ -184,7 +184,7 @@ public:
     HRESULT STDMETHODCALLTYPE Reset();
     HRESULT STDMETHODCALLTYPE Clone(IEnumVARIANT **ppEnum);
 
-    static HRESULT create(IMatchCollection2 *mc, IUnknown **ppEnum);
+    static HRESULT create(IMatchCollection2 *mc, LONG pos, IUnknown **ppEnum);
 };
 
 class MatchCollection2
@@ -346,11 +346,12 @@ HRESULT STDMETHODCALLTYPE SubMatchesEnum::Reset()
 
 HRESULT STDMETHODCALLTYPE SubMatchesEnum::Clone(IEnumVARIANT **ppEnum)
 {
-    FIXME("(%p)->(%p)\n", this, ppEnum);
-    return E_NOTIMPL;
+    TRACE("(%p)->(%p)\n", this, ppEnum);
+
+    return create(sm, pos, reinterpret_cast<IUnknown **>(ppEnum));
 }
 
-HRESULT SubMatchesEnum::create(ISubMatches *sm, IUnknown **ppEnum)
+HRESULT SubMatchesEnum::create(ISubMatches *sm, LONG pos, IUnknown **ppEnum)
 {
     SubMatchesEnum *ret = new(std::nothrow) SubMatchesEnum;
 
@@ -361,6 +362,7 @@ HRESULT SubMatchesEnum::create(ISubMatches *sm, IUnknown **ppEnum)
     sm->get_Count(&ret->count);
     ret->sm = sm;
     sm->AddRef();
+    ret->pos = pos;
 
     *ppEnum = ret;
     return S_OK;
@@ -437,12 +439,12 @@ HRESULT STDMETHODCALLTYPE SubMatches::get_Count(LONG *pCount)
 
 HRESULT STDMETHODCALLTYPE SubMatches::get__NewEnum(IUnknown **ppEnum)
 {
-    FIXME("(%p)->(%p)\n", this, ppEnum);
+    TRACE("(%p)->(%p)\n", this, ppEnum);
 
     if (!ppEnum)
         return E_POINTER;
 
-    return SubMatchesEnum::create(this, ppEnum);
+    return SubMatchesEnum::create(this, 0, ppEnum);
 }
 
 ITypeInfo *Dispatch<ISubMatches>::typeinfo = NULL;
@@ -659,11 +661,12 @@ HRESULT STDMETHODCALLTYPE MatchCollectionEnum::Reset()
 
 HRESULT STDMETHODCALLTYPE MatchCollectionEnum::Clone(IEnumVARIANT **ppEnum)
 {
-    FIXME("(%p)->(%p)\n", this, ppEnum);
-    return E_NOTIMPL;
+    TRACE("(%p)->(%p)\n", this, ppEnum);
+
+    return create(mc, pos, reinterpret_cast<IUnknown **>(ppEnum));
 }
 
-HRESULT MatchCollectionEnum::create(IMatchCollection2 *mc, IUnknown **ppEnum)
+HRESULT MatchCollectionEnum::create(IMatchCollection2 *mc, LONG pos, IUnknown **ppEnum)
 {
     MatchCollectionEnum *ret = new(std::nothrow) MatchCollectionEnum;
 
@@ -674,6 +677,7 @@ HRESULT MatchCollectionEnum::create(IMatchCollection2 *mc, IUnknown **ppEnum)
     mc->get_Count(&ret->count);
     ret->mc = mc;
     mc->AddRef();
+    ret->pos = pos;
 
     *ppEnum = ret;
     return S_OK;
@@ -755,7 +759,7 @@ HRESULT STDMETHODCALLTYPE MatchCollection2::get__NewEnum(IUnknown **ppEnum)
     if (!ppEnum)
         return E_POINTER;
 
-    return MatchCollectionEnum::create(this, ppEnum);
+    return MatchCollectionEnum::create(this, 0, ppEnum);
 }
 
 ITypeInfo *Dispatch<IMatchCollection2>::typeinfo = NULL;
