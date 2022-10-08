@@ -61,6 +61,18 @@ Function Test(str, exp, max, expected)
 	Test = 1 - Sgn(num_of_failures)
 End Function
 
+Function TestError(str, exp)
+	Dim re
+	Set re = CreateObject(RegExpClass)
+	re.Pattern = exp
+	On Error Resume Next
+	re.Execute str
+	WScript.Echo Err.Number & " from " & Err.Source & ": " & Err.Description
+	WScript.Echo Replace("Result: failed.", "failed", "passed", 1, Err.Number)
+	TestError = Sgn(Err.Number)
+	WScript.Echo
+End Function
+
 Function Main
 	Dim str, exp, expected
 	Dim num_of_tests
@@ -70,6 +82,12 @@ Function Main
 
 	WScript.Echo "RegExpClass = " & RegExpClass
 	WScript.Echo
+
+	WScript.Echo "Exception Test"
+	str = "abc"
+	exp = "*"
+	num_of_tests_passed = num_of_tests_passed + TestError(str, exp)
+	num_of_tests = num_of_tests + 1
 
 	WScript.Echo "Test 1 (ECMAScript 2021 Language Specification 22.2.2.3, NOTE)"
 	str = "abc"

@@ -15,6 +15,7 @@
 #include "srell.hpp"
 #include "vbsregexp55_h.h"
 #include "vbsregexp55_i.c"
+#include "Utf8Conv.h"
 
 enum {
     REG_FOLD = RE_PREFIX::wregex::icase,
@@ -42,10 +43,10 @@ static inline BOOL is_digit(WCHAR c)
 // Silly macro to apply the double-checked-lock pattern to some piece of code
 // Copyright (c) datadiode
 // SPDX-License-Identifier: MIT
-#define init_once \
+#define init_once(...) \
     for (static LONG volatile static_init_once = 0;;) \
     if (LONG init_once = InterlockedCompareExchange(&static_init_once, 1, 0)) \
-    { if (init_once == 3) break; Sleep(10); } \
+    { if (init_once == 3) break; Sleep(static_cast<DWORD>(__VA_ARGS__.0)); } \
     else while (InterlockedIncrement(&static_init_once) == 2)
 
 HMODULE g_module = NULL;
@@ -56,6 +57,46 @@ class ZeroInit
 protected:
     ZeroInit() {
         memset(static_cast<Self *>(this), 0, sizeof(Self));
+    }
+};
+
+// IDispatch implementation helper template
+// Copyright (c) datadiode
+// SPDX-License-Identifier: MIT
+template<typename ISuper>
+class Dispatch : public ISuper
+{
+protected:
+    static ITypeInfo *typeinfo;
+public:
+    static HRESULT InitTypeInfo(ITypeLib *typelib) {
+        return typelib->GetTypeInfoOfGuid(__uuidof(ISuper), &typeinfo);
+    }
+    STDMETHOD(GetTypeInfoCount)(UINT *pctinfo) {
+        *pctinfo = 1;
+        return S_OK;
+    }
+    STDMETHOD(GetTypeInfo)(UINT, LCID, ITypeInfo **ppTInfo) {
+        (*ppTInfo = typeinfo)->AddRef();
+        return S_OK;
+    }
+    STDMETHOD(GetIDsOfNames)(REFIID, LPOLESTR *rgNames, UINT cNames, LCID, DISPID *rgDispId) {
+        return typeinfo->GetIDsOfNames(rgNames, cNames, rgDispId);
+    }
+    STDMETHOD(Invoke)(DISPID dispid, REFIID, LCID, WORD wFlags,
+                      DISPPARAMS *pDispParams, VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr) {
+        HRESULT hr = DISP_E_EXCEPTION;
+        try {
+            hr = typeinfo->Invoke(static_cast<ISuper *>(this),
+                                  dispid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
+        } catch (std::exception &e) {
+            pExcepInfo->wCode = 1001;
+            if (const char *const text = e.what()) {
+                Utf16FromUtf8(text, strlen(text), &pExcepInfo->bstrDescription);
+            }
+            typeinfo->GetDocumentation(-1, &pExcepInfo->bstrSource, NULL, NULL, NULL);
+        }
+        return hr;
     }
 };
 
@@ -83,7 +124,7 @@ public:
 
 class SubMatches
     : public ZeroInit<SubMatches>
-    , public ISubMatches
+    , public Dispatch<ISubMatches>
 {
 private:
     LONG ref;
@@ -94,26 +135,17 @@ public:
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
 
-    HRESULT STDMETHODCALLTYPE GetTypeInfoCount(UINT *pctinfo);
-    HRESULT STDMETHODCALLTYPE GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo);
-    HRESULT STDMETHODCALLTYPE GetIDsOfNames(
-        REFIID riid, LPOLESTR *rgszNames, UINT cNames, LCID lcid, DISPID *rgDispId);
-    HRESULT STDMETHODCALLTYPE Invoke(DISPID dispIdMember,
-                                     REFIID riid, LCID lcid, WORD wFlags, DISPPARAMS *pDispParams,
-                                     VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr);
-
     HRESULT STDMETHODCALLTYPE get_Item(LONG index, VARIANT *pSubMatch);
     HRESULT STDMETHODCALLTYPE get_Count(LONG *pCount);
     HRESULT STDMETHODCALLTYPE get__NewEnum(IUnknown **ppEnum);
 
-    static ITypeInfo *typeinfo;
     static HRESULT create(RE_PREFIX::wcmatch &result, SubMatches **sub_matches);
 };
 
 class Match2
     : public ZeroInit<Match2>
-    , public IMatch2
-    , public IMatch
+    , public Dispatch<IMatch2>
+    , public Dispatch<IMatch>
 {
 private:
     LONG ref;
@@ -125,20 +157,11 @@ public:
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
 
-    HRESULT STDMETHODCALLTYPE GetTypeInfoCount(UINT *pctinfo);
-    HRESULT STDMETHODCALLTYPE GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo);
-    HRESULT STDMETHODCALLTYPE GetIDsOfNames(
-        REFIID riid, LPOLESTR *rgszNames, UINT cNames, LCID lcid, DISPID *rgDispId);
-    HRESULT STDMETHODCALLTYPE Invoke(DISPID dispIdMember,
-                                     REFIID riid, LCID lcid, WORD wFlags, DISPPARAMS *pDispParams,
-                                     VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr);
-
     HRESULT STDMETHODCALLTYPE get_Value(BSTR *pValue);
     HRESULT STDMETHODCALLTYPE get_FirstIndex(LONG *pFirstIndex);
     HRESULT STDMETHODCALLTYPE get_Length(LONG *pLength);
     HRESULT STDMETHODCALLTYPE get_SubMatches(IDispatch **ppSubMatches);
 
-    static ITypeInfo *typeinfo;
     static HRESULT create(DWORD pos, RE_PREFIX::wcmatch &result, IMatch2 **match);
 };
 
@@ -166,8 +189,8 @@ public:
 
 class MatchCollection2
     : public ZeroInit<MatchCollection2>
-    , public IMatchCollection2
-    , public IMatchCollection
+    , public Dispatch<IMatchCollection2>
+    , public Dispatch<IMatchCollection>
 {
 private:
     LONG ref;
@@ -179,26 +202,17 @@ public:
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
 
-    HRESULT STDMETHODCALLTYPE GetTypeInfoCount(UINT *pctinfo);
-    HRESULT STDMETHODCALLTYPE GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo);
-    HRESULT STDMETHODCALLTYPE GetIDsOfNames(
-        REFIID riid, LPOLESTR *rgszNames, UINT cNames, LCID lcid, DISPID *rgDispId);
-    HRESULT STDMETHODCALLTYPE Invoke(DISPID dispIdMember,
-                                     REFIID riid, LCID lcid, WORD wFlags, DISPPARAMS *pDispParams,
-                                     VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr);
-
     HRESULT STDMETHODCALLTYPE get_Item(LONG index, IDispatch **ppMatch);
     HRESULT STDMETHODCALLTYPE get_Count(LONG *pCount);
     HRESULT STDMETHODCALLTYPE get__NewEnum(IUnknown **ppEnum);
 
-    static ITypeInfo *typeinfo;
     static HRESULT create(MatchCollection2 **match_collection);
 };
 
 class RegExp2
     : public ZeroInit<RegExp2>
-    , public IRegExp2
-    , public IRegExp
+    , public Dispatch<IRegExp2>
+    , public Dispatch<IRegExp>
 {
 private:
     LONG ref;
@@ -213,14 +227,6 @@ public:
     ULONG STDMETHODCALLTYPE AddRef();
     ULONG STDMETHODCALLTYPE Release();
 
-    HRESULT STDMETHODCALLTYPE GetTypeInfoCount(UINT *pctinfo);
-    HRESULT STDMETHODCALLTYPE GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo);
-    HRESULT STDMETHODCALLTYPE GetIDsOfNames(
-        REFIID riid, LPOLESTR *rgszNames, UINT cNames, LCID lcid, DISPID *rgDispId);
-    HRESULT STDMETHODCALLTYPE Invoke(DISPID dispIdMember,
-                                     REFIID riid, LCID lcid, WORD wFlags, DISPPARAMS *pDispParams,
-                                     VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr);
-
     HRESULT STDMETHODCALLTYPE get_Pattern(BSTR *);
     HRESULT STDMETHODCALLTYPE put_Pattern(BSTR);
     HRESULT STDMETHODCALLTYPE get_IgnoreCase(VARIANT_BOOL *);
@@ -234,7 +240,6 @@ public:
     HRESULT STDMETHODCALLTYPE Replace(BSTR source, VARIANT replaceVar, BSTR *pDestString);
     HRESULT STDMETHODCALLTYPE Replace(BSTR source, BSTR replace, BSTR *pDestString);
 
-    static ITypeInfo *typeinfo;
     static HRESULT create(IDispatch **ret);
 
 private:
@@ -399,42 +404,6 @@ ULONG STDMETHODCALLTYPE SubMatches::Release()
     return ref;
 }
 
-HRESULT STDMETHODCALLTYPE SubMatches::GetTypeInfoCount(UINT *pctinfo)
-{
-    TRACE("(%p)->(%p)\n", this, pctinfo);
-    *pctinfo = 1;
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE SubMatches::GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo)
-{
-    TRACE("(%p)->(%u %lu %p)\n", this, iTInfo, lcid, ppTInfo);
-    if (iTInfo != 0)
-        return DISP_E_BADINDEX;
-    (*ppTInfo = typeinfo)->AddRef();
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE SubMatches::GetIDsOfNames(
-    REFIID riid, LPOLESTR *rgszNames, UINT cNames, LCID lcid, DISPID *rgDispId)
-{
-    TRACE("(%p)->(%s %p %u %lu %p)\n", this, debugstr_guid(riid),
-          rgszNames, cNames, lcid, rgDispId);
-
-    return typeinfo->GetIDsOfNames(rgszNames, cNames, rgDispId);
-}
-
-HRESULT STDMETHODCALLTYPE SubMatches::Invoke(DISPID dispIdMember,
-        REFIID riid, LCID lcid, WORD wFlags, DISPPARAMS *pDispParams,
-        VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr)
-{
-    TRACE("(%p)->(%ld %s %ld %d %p %p %p %p)\n", this, dispIdMember, debugstr_guid(riid),
-          lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
-
-    return typeinfo->Invoke(this, dispIdMember, wFlags,
-                            pDispParams, pVarResult, pExcepInfo, puArgErr);
-}
-
 HRESULT STDMETHODCALLTYPE SubMatches::get_Item(LONG index, VARIANT *pSubMatch)
 {
     TRACE("(%p)->(%ld %p)\n", this, index, pSubMatch);
@@ -476,7 +445,7 @@ HRESULT STDMETHODCALLTYPE SubMatches::get__NewEnum(IUnknown **ppEnum)
     return SubMatchesEnum::create(this, ppEnum);
 }
 
-ITypeInfo *SubMatches::typeinfo = NULL;
+ITypeInfo *Dispatch<ISubMatches>::typeinfo = NULL;
 
 HRESULT SubMatches::create(RE_PREFIX::wcmatch &result, SubMatches **sub_matches)
 {
@@ -533,42 +502,6 @@ ULONG STDMETHODCALLTYPE Match2::Release()
     return ref;
 }
 
-HRESULT STDMETHODCALLTYPE Match2::GetTypeInfoCount(UINT *pctinfo)
-{
-    TRACE("(%p)->(%p)\n", this, pctinfo);
-    *pctinfo = 1;
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE Match2::GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo)
-{
-    TRACE("(%p)->(%u %lu %p)\n", this, iTInfo, lcid, ppTInfo);
-    if (iTInfo != 0)
-        return DISP_E_BADINDEX;
-    (*ppTInfo = typeinfo)->AddRef();
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE Match2::GetIDsOfNames(
-    REFIID riid, LPOLESTR *rgszNames, UINT cNames, LCID lcid, DISPID *rgDispId)
-{
-    TRACE("(%p)->(%s %p %u %lu %p)\n", this, debugstr_guid(riid),
-          rgszNames, cNames, lcid, rgDispId);
-
-    return typeinfo->GetIDsOfNames(rgszNames, cNames, rgDispId);
-}
-
-HRESULT STDMETHODCALLTYPE Match2::Invoke(DISPID dispIdMember,
-        REFIID riid, LCID lcid, WORD wFlags, DISPPARAMS *pDispParams,
-        VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr)
-{
-    TRACE("(%p)->(%ld %s %ld %d %p %p %p %p)\n", this, dispIdMember, debugstr_guid(riid),
-          lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
-
-    return typeinfo->Invoke(static_cast<IMatch2 *>(this), dispIdMember, wFlags,
-                            pDispParams, pVarResult, pExcepInfo, puArgErr);
-}
-
 HRESULT STDMETHODCALLTYPE Match2::get_Value(BSTR *pValue)
 {
     TRACE("(%p)->(%p)\n", this, pValue);
@@ -616,7 +549,8 @@ HRESULT STDMETHODCALLTYPE Match2::get_SubMatches(IDispatch **ppSubMatches)
     return S_OK;
 }
 
-ITypeInfo *Match2::typeinfo = NULL;
+ITypeInfo *Dispatch<IMatch2>::typeinfo = NULL;
+ITypeInfo *Dispatch<IMatch>::typeinfo = NULL;
 
 HRESULT Match2::create(DWORD pos, RE_PREFIX::wcmatch &result, IMatch2 **match)
 {
@@ -788,42 +722,6 @@ ULONG STDMETHODCALLTYPE MatchCollection2::Release()
     return ref;
 }
 
-HRESULT STDMETHODCALLTYPE MatchCollection2::GetTypeInfoCount(UINT *pctinfo)
-{
-    TRACE("(%p)->(%p)\n", this, pctinfo);
-    *pctinfo = 1;
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE MatchCollection2::GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo)
-{
-    TRACE("(%p)->(%u %lu %p)\n", this, iTInfo, lcid, ppTInfo);
-    if (iTInfo != 0)
-        return DISP_E_BADINDEX;
-    (*ppTInfo = typeinfo)->AddRef();
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE MatchCollection2::GetIDsOfNames(
-    REFIID riid, LPOLESTR *rgszNames, UINT cNames, LCID lcid, DISPID *rgDispId)
-{
-    TRACE("(%p)->(%s %p %u %lu %p)\n", this, debugstr_guid(riid),
-          rgszNames, cNames, lcid, rgDispId);
-
-    return typeinfo->GetIDsOfNames(rgszNames, cNames, rgDispId);
-}
-
-HRESULT STDMETHODCALLTYPE MatchCollection2::Invoke(DISPID dispIdMember,
-        REFIID riid, LCID lcid, WORD wFlags, DISPPARAMS *pDispParams,
-        VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr)
-{
-    TRACE("(%p)->(%ld %s %ld %d %p %p %p %p)\n", this, dispIdMember, debugstr_guid(riid),
-          lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
-
-    return typeinfo->Invoke(static_cast<IMatchCollection2 *>(this), dispIdMember, wFlags,
-                            pDispParams, pVarResult, pExcepInfo, puArgErr);
-}
-
 HRESULT STDMETHODCALLTYPE MatchCollection2::get_Item(LONG index, IDispatch **ppMatch)
 {
     TRACE("(%p)->()\n", this);
@@ -860,7 +758,8 @@ HRESULT STDMETHODCALLTYPE MatchCollection2::get__NewEnum(IUnknown **ppEnum)
     return MatchCollectionEnum::create(this, ppEnum);
 }
 
-ITypeInfo *MatchCollection2::typeinfo = NULL;
+ITypeInfo *Dispatch<IMatchCollection2>::typeinfo = NULL;
+ITypeInfo *Dispatch<IMatchCollection>::typeinfo = NULL;
 
 HRESULT MatchCollection2::create(MatchCollection2 **match_collection)
 {
@@ -912,42 +811,6 @@ ULONG STDMETHODCALLTYPE RegExp2::Release()
         delete this;
     }
     return ref;
-}
-
-HRESULT STDMETHODCALLTYPE RegExp2::GetTypeInfoCount(UINT *pctinfo)
-{
-    TRACE("(%p)->(%p)\n", this, pctinfo);
-    *pctinfo = 1;
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE RegExp2::GetTypeInfo(UINT iTInfo, LCID lcid, ITypeInfo **ppTInfo)
-{
-    TRACE("(%p)->(%u %lu %p)\n", this, iTInfo, lcid, ppTInfo);
-    if (iTInfo != 0)
-        return DISP_E_BADINDEX;
-    (*ppTInfo = typeinfo)->AddRef();
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE RegExp2::GetIDsOfNames(
-    REFIID riid, LPOLESTR *rgszNames, UINT cNames, LCID lcid, DISPID *rgDispId)
-{
-    TRACE("(%p)->(%s %p %u %lu %p)\n", this, debugstr_guid(riid),
-          rgszNames, cNames, lcid, rgDispId);
-
-    return typeinfo->GetIDsOfNames(rgszNames, cNames, rgDispId);
-}
-
-HRESULT STDMETHODCALLTYPE RegExp2::Invoke(DISPID dispIdMember,
-        REFIID riid, LCID lcid, WORD wFlags, DISPPARAMS *pDispParams,
-        VARIANT *pVarResult, EXCEPINFO *pExcepInfo, UINT *puArgErr)
-{
-    TRACE("(%p)->(%ld %s %ld %d %p %p %p %p)\n", this, dispIdMember, debugstr_guid(riid),
-          lcid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
-
-    return typeinfo->Invoke(static_cast<RegExp2 *>(this), dispIdMember, wFlags,
-                            pDispParams, pVarResult, pExcepInfo, puArgErr);
 }
 
 HRESULT STDMETHODCALLTYPE RegExp2::get_Pattern(BSTR *pPattern)
@@ -1301,7 +1164,8 @@ void RegExp2::update()
     }
 }
 
-ITypeInfo *RegExp2::typeinfo = NULL;
+ITypeInfo *Dispatch<IRegExp2>::typeinfo = NULL;
+ITypeInfo *Dispatch<IRegExp>::typeinfo = NULL;
 
 HRESULT RegExp2::create(IDispatch **ret)
 {
@@ -1348,14 +1212,17 @@ HRESULT STDMETHODCALLTYPE RegExp2Factory::CreateInstance(IUnknown *pUnkOuter, RE
 
     static HRESULT hres_once = S_OK;
 
-    init_once {
+    init_once() {
         WCHAR szFileName[MAX_PATH];
         GetModuleFileNameW(g_module, szFileName, MAX_PATH);
         if (FAILED(hres_once = LoadTypeLib(szFileName, &typelib))) continue;
-        if (FAILED(hres_once = typelib->GetTypeInfoOfGuid(IID_IRegExp2, &RegExp2::typeinfo))) continue;
-        if (FAILED(hres_once = typelib->GetTypeInfoOfGuid(IID_IMatch2, &Match2::typeinfo))) continue;
-        if (FAILED(hres_once = typelib->GetTypeInfoOfGuid(IID_IMatchCollection2, &MatchCollection2::typeinfo))) continue;
-        if (FAILED(hres_once = typelib->GetTypeInfoOfGuid(IID_ISubMatches, &SubMatches::typeinfo))) continue;
+        if (FAILED(hres_once = Dispatch<IRegExp2>::InitTypeInfo(typelib))) continue;
+        if (FAILED(hres_once = Dispatch<IRegExp>::InitTypeInfo(typelib))) continue;
+        if (FAILED(hres_once = Dispatch<IMatch2>::InitTypeInfo(typelib))) continue;
+        if (FAILED(hres_once = Dispatch<IMatch>::InitTypeInfo(typelib))) continue;
+        if (FAILED(hres_once = Dispatch<IMatchCollection2>::InitTypeInfo(typelib))) continue;
+        if (FAILED(hres_once = Dispatch<IMatchCollection>::InitTypeInfo(typelib))) continue;
+        if (FAILED(hres_once = Dispatch<ISubMatches>::InitTypeInfo(typelib))) continue;
     }
 
     if (FAILED(hres_once))
