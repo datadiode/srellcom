@@ -1,0 +1,21 @@
+version: 1.0.{build}
+image: Visual Studio 2015
+
+configuration:
+- Debug
+- Release
+
+platform:
+- Win32
+- x64
+
+build:
+  verbosity: normal
+  project: srellcom.sln
+
+after_build:
+- cmd: FOR /F %%A IN (srellcom\%PLATFORM%\%CONFIGURATION%\GIT-VS-VERSION-FILE) DO SET PRODUCT_VERSION=%%A
+
+artifacts:
+- path: $(platform)\$(configuration)
+  name: srellcom_$(PRODUCT_VERSION)-$(platform)-$(configuration)
