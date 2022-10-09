@@ -13,6 +13,9 @@ build:
   verbosity: normal
   project: srellcom.sln
 
+before_build:
+- cmd: echo.>vld.h
+
 after_build:
 - cmd: FOR /F %%A IN (srellcom\%PLATFORM%\%CONFIGURATION%\GIT-VS-VERSION-FILE) DO SET PRODUCT_VERSION=%%A
 

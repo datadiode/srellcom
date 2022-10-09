@@ -10,7 +10,7 @@
  */
 
 #include <windows.h>
-#include <vld.h>
+#include "vld.h"
 #define RE_PREFIX srell
 #include "srell.hpp"
 #include "vbsregexp55_h.h"
