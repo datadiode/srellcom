@@ -20952,6 +20952,10 @@ private:
 				}
 
 				sstate.nth.in_NFA_states = current_NFA.next_state1;
+
+				if (sstate.nth.in_NFA_states == NULL)
+					throw regex_error(regex_constants::error_internal);
+
 				continue;
 
 			default:
