@@ -1,10 +1,11 @@
 #include "windows.h"
+#include "gen-versioninfo.h"
 
 1 TYPELIB DISCARDABLE "srellcom.tlb"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION	 1,0,0,0
-PRODUCTVERSION  1,0,0,0
+FILEVERSION GEN_VER_DIGITAL_VERSION
+PRODUCTVERSION GEN_VER_DIGITAL_VERSION
 
 BEGIN
 	BLOCK "StringFileInfo"
@@ -13,12 +14,12 @@ BEGIN
 		BEGIN
 			VALUE "CompanyName",        "datadiode"
 			VALUE "FileDescription",    "SRELL Regular Expression COM Wrapper"
-			VALUE "FileVersion",        "1.0.0.0"
+			VALUE "FileVersion",        GEN_VER_VERSION_STRING
 			VALUE "InternalName",       "srellcom.dll"
 			VALUE "LegalCopyright",	    "LGPL-2.1-or-later"
 			VALUE "OriginalFilename",   "srellcom.dll"
 			VALUE "ProductName",        "SRELL Regular Expression COM Wrapper"
-			VALUE "ProductVersion",     "1.0.0.0"
+			VALUE "ProductVersion",     GEN_VER_VERSION_STRING
 		END
 	END
 
