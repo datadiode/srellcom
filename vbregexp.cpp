@@ -89,6 +89,12 @@ public:
         try {
             hr = typeinfo->Invoke(static_cast<ISuper *>(this),
                                   dispid, wFlags, pDispParams, pVarResult, pExcepInfo, puArgErr);
+        } catch (RE_PREFIX::regex_error &e) {
+            pExcepInfo->wCode = static_cast<WORD>(1000 + e.code());
+            if (const char *const text = e.what()) {
+                Utf16FromUtf8(text, strlen(text), &pExcepInfo->bstrDescription);
+            }
+            typeinfo->GetDocumentation(-1, &pExcepInfo->bstrSource, NULL, NULL, NULL);
         } catch (std::exception &e) {
             pExcepInfo->wCode = 1001;
             if (const char *const text = e.what()) {
