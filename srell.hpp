@@ -1,6 +1,6 @@
 /*****************************************************************************
 **
-**  SRELL (std::regex-like library) version 4.000
+**  SRELL (std::regex-like library) version 4.001
 **
 **  Copyright (c) 2012-2022, Nozomu Katoo. All rights reserved.
 **
@@ -608,7 +608,7 @@ public:
 		if ((codepoint & 0x80) == 0)	//  1 octet.
 			return codepoint;
 
-		if (++begin != end && (codepoint >= 0xc0 && codepoint <= 0xf7) && (*begin & 0xc0) == 0x80)
+		if (++begin != end && codepoint >= 0xc0 && (*begin & 0xc0) == 0x80)
 		{
 			codepoint = static_cast<uchar32>((codepoint << 6) | (*begin & 0x3f));
 
@@ -622,11 +622,12 @@ public:
 				if ((codepoint & 0x10000) == 0)	//  3 octets.
 					return static_cast<uchar32>(codepoint & 0xffff);
 
-				if (++begin != end && (*begin & 0xc0) == 0x80)	//  4 octets.
+				if (++begin != end && (*begin & 0xc0) == 0x80)
 				{
 					codepoint = static_cast<uchar32>((codepoint << 6) | (*begin & 0x3f));
 
-					return static_cast<uchar32>(codepoint & 0x1fffff);
+					if (codepoint <= 0x3dfffff)	//  4 octets.
+						return static_cast<uchar32>(codepoint & 0x1fffff);
 				}
 			}
 		}
@@ -643,10 +644,8 @@ public:
 		if ((codepoint & 0x80) == 0)	//  1 octet.
 			return codepoint;
 
-		//  Expects transformation to (codepoint - 0xc0) <= 0x37 by optimisation.
-		//  0xF7 instead of 0xF4 is for consistency with reverse iterators.
-		if (begin != end && (codepoint >= 0xc0 && codepoint <= 0xf7) && (*begin & 0xc0) == 0x80)
 //		if (begin != end && (0x7f00 & (1 << ((codepoint >> 3) & 0xf))) && (*begin & 0xc0) == 0x80)	//  c0, c8, d0, d8, e0, e8, f0.
+		if (begin != end && codepoint >= 0xc0 && (*begin & 0xc0) == 0x80)
 		{
 			codepoint = static_cast<uchar32>((codepoint << 6) | (*begin++ & 0x3f));
 
@@ -667,8 +666,8 @@ public:
 					//  e08080-e09fbf: invalid. 000-7FF.
 					//  e0a080-efbfbf: valid. 0800-FFFF.
 
-				//  1111 0aaa bbbb bbcc cccc
-				if (begin != end && (*begin & 0xc0) == 0x80)	//  4 octets.
+				//  1111 aaaa bbbb bbcc cccc
+				if (begin != end && (*begin & 0xc0) == 0x80)
 				{
 					codepoint = static_cast<uchar32>((codepoint << 6) | (*begin++ & 0x3f));
 					//  f0808080-f08fbfbf: invalid. 0000-FFFF.
@@ -677,8 +676,14 @@ public:
 					//  f4908080-f4bfbfbf: invalid. 110000-13FFFF.
 					//  f5808080-f7bfbfbf: invalid. 140000-1FFFFF.
 
-					//  11 110a aabb bbbb cccc ccdd dddd
-					return static_cast<uchar32>(codepoint & 0x1fffff);
+					//  11 11?a aabb bbbb cccc ccdd dddd
+					if (codepoint <= 0x3dfffff)	//  4 octets.
+						return static_cast<uchar32>(codepoint & 0x1fffff);
+						//  11 110a aabb bbbb cccc ccdd dddd
+
+					--begin;
+					--begin;
+					--begin;
 				}
 			}
 		}
@@ -14881,6 +14886,11 @@ struct re_state
 	{
 		return type == st_epsilon && next2 != 0 && character == meta_char::mc_bar;	//  '|'
 	}
+
+	bool is_asterisk_or_plus_for_onelen_atom() const
+	{
+		return type == st_epsilon && next1 == 1 && next2 == 2 && quantifier.is_asterisk_or_plus();
+	}
 };
 //  re_state
 
@@ -17067,6 +17077,17 @@ private:
 			if (classatom.type == st_character_class)
 			{
 				ranges.merge(curranges);
+
+				if (curpos != end && *curpos == meta_char::mc_minus)	//  '-'
+				{
+					if (++curpos == end)
+						this->throw_error(regex_constants::error_brack);
+
+					if (*curpos == meta_char::mc_sbracl)
+						break;	// OK.
+
+					this->throw_error(regex_constants::error_brack);
+				}
 				continue;
 			}
 
@@ -18559,6 +18580,17 @@ private:
 							}
 							else
 							{
+								if (brs.next1 == -1)
+								{
+									state_type &prevstate = this->NFA_states[backrefpos + brs.next1];
+
+									if (prevstate.is_asterisk_or_plus_for_onelen_atom())
+									{
+										prevstate.next1 = 2;
+										prevstate.next2 = 0;
+									}
+								}
+
 								brs.type = st_epsilon;
 								brs.next2 = 0;
 							}
@@ -20952,10 +20984,6 @@ private:
 				}
 
 				sstate.nth.in_NFA_states = current_NFA.next_state1;
-
-				if (sstate.nth.in_NFA_states == NULL)
-					throw regex_error(regex_constants::error_internal);
-
 				continue;
 
 			default:
