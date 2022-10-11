@@ -15,7 +15,7 @@ Dim fs
 Set fs = CreateObject("Scripting.FileSystemObject")
 
 Sub RunTest(testinput)
-	Dim stm, line, j, c, identified, compilable, uncompilable, ignored, polarity, failed, passed, messed, matched
+	Dim stm, line, j, c, identified, compilable, uncompilable, ignored, polarity, failed, passed, messed, matched, singleline
 	Set stm = fs.OpenTextFile(testinput)
 	While Not stm.AtEndOfStream
 		line = stm.ReadLine
@@ -35,9 +35,14 @@ Sub RunTest(testinput)
 			re.pattern = Mid(line, 2, j - 2)
 			re.IgnoreCase = InStrRev(line, "i") > j
 			re.MultiLine = InStrRev(line, "m") > j
+			On Error Resume Next
+			re.SingleLine = InStrRev(line, "s") > j
+			singleline = Err.Number = 0
+			On Error GoTo 0
 			identified = identified + 1
-			If InStrRev(line, "s") > j Or InStrRev(line, "x") > j Then
-				' srellcom does not support the s and x modifiers
+			If InStrRev(line, "x") > j Or Not singleline And InStrRev(line, "s") > j Then
+				' Neither srellcom nor VBScript.RegExp support the x modifier
+				' VBScript.RegExp does not support the s modifier
 				ignored = ignored + 1
 				polarity = 0
 			Else

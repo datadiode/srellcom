@@ -20,6 +20,7 @@
 enum {
     REG_FOLD = RE_PREFIX::wregex::icase,
     REG_MULTILINE = RE_PREFIX::wregex::multiline,
+    REG_SINGLELINE = RE_PREFIX::wregex::dotall,
     REG_GLOB = 0x4000,
     REG_PATTERN = 0x8000,
 };
@@ -33,7 +34,6 @@ enum {
 static char const *debugstr_guid(const GUID &);
 static char const *wine_dbgstr_w(WCHAR const *);
 static char const *debugstr_w(WCHAR const *);
-static char const *debugstr_variant(VARIANT const *);
 
 static inline BOOL is_digit(WCHAR c)
 {
@@ -151,7 +151,6 @@ public:
 class Match2
     : public ZeroInit<Match2>
     , public Dispatch<IMatch2>
-    , public Dispatch<IMatch>
 {
 private:
     LONG ref;
@@ -196,7 +195,6 @@ public:
 class MatchCollection2
     : public ZeroInit<MatchCollection2>
     , public Dispatch<IMatchCollection2>
-    , public Dispatch<IMatchCollection>
 {
 private:
     LONG ref;
@@ -218,7 +216,6 @@ public:
 class RegExp2
     : public ZeroInit<RegExp2>
     , public Dispatch<IRegExp2>
-    , public Dispatch<IRegExp>
 {
 private:
     LONG ref;
@@ -241,9 +238,10 @@ public:
     HRESULT STDMETHODCALLTYPE put_Global(VARIANT_BOOL);
     HRESULT STDMETHODCALLTYPE get_Multiline(VARIANT_BOOL *);
     HRESULT STDMETHODCALLTYPE put_Multiline(VARIANT_BOOL);
+    HRESULT STDMETHODCALLTYPE get_Singleline(VARIANT_BOOL *);
+    HRESULT STDMETHODCALLTYPE put_Singleline(VARIANT_BOOL);
     HRESULT STDMETHODCALLTYPE Execute(BSTR source, IDispatch **ppMatches);
     HRESULT STDMETHODCALLTYPE Test(BSTR source, VARIANT_BOOL *pMatch);
-    HRESULT STDMETHODCALLTYPE Replace(BSTR source, VARIANT replaceVar, BSTR *pDestString);
     HRESULT STDMETHODCALLTYPE Replace(BSTR source, BSTR replace, BSTR *pDestString);
 
     static HRESULT create(IDispatch **ret);
@@ -479,9 +477,6 @@ HRESULT STDMETHODCALLTYPE Match2::QueryInterface(REFIID riid, void **ppv)
     } else if (IsEqualGUID(riid, IID_IMatch2)) {
         TRACE("(%p)->(IID_IMatch2 %p)\n", this, ppv);
         *ppv = static_cast<IMatch2 *>(this);
-    } else if (IsEqualGUID(riid, IID_IMatch)) {
-        TRACE("(%p)->(IID_IMatch %p)\n", this, ppv);
-        *ppv = static_cast<IMatch *>(this);
     } else {
         FIXME("(%p)->(%s %p)\n", this, debugstr_guid(riid), ppv);
         *ppv = NULL;
@@ -558,7 +553,6 @@ HRESULT STDMETHODCALLTYPE Match2::get_SubMatches(IDispatch **ppSubMatches)
 }
 
 ITypeInfo *Dispatch<IMatch2>::typeinfo = NULL;
-ITypeInfo *Dispatch<IMatch>::typeinfo = NULL;
 
 HRESULT Match2::create(DWORD pos, RE_PREFIX::wcmatch &result, IMatch2 **match)
 {
@@ -700,9 +694,6 @@ HRESULT STDMETHODCALLTYPE MatchCollection2::QueryInterface(REFIID riid, void **p
     } else if (IsEqualGUID(riid, IID_IMatchCollection2)) {
         TRACE("(%p)->(IID_IMatchCollection2 %p)\n", this, ppv);
         *ppv = static_cast<IMatchCollection2 *>(this);
-    } else if (IsEqualGUID(riid, IID_IMatchCollection)) {
-        TRACE("(%p)->(IID_IMatchCollection %p)\n", this, ppv);
-        *ppv = static_cast<IMatchCollection *>(this);
     } else {
         FIXME("(%p)->(%s %p)\n", this, debugstr_guid(riid), ppv);
         *ppv = NULL;
@@ -769,7 +760,6 @@ HRESULT STDMETHODCALLTYPE MatchCollection2::get__NewEnum(IUnknown **ppEnum)
 }
 
 ITypeInfo *Dispatch<IMatchCollection2>::typeinfo = NULL;
-ITypeInfo *Dispatch<IMatchCollection>::typeinfo = NULL;
 
 HRESULT MatchCollection2::create(MatchCollection2 **match_collection)
 {
@@ -793,9 +783,6 @@ HRESULT STDMETHODCALLTYPE RegExp2::QueryInterface(REFIID riid, void **ppv)
     } else if (IsEqualGUID(riid, IID_IRegExp2)) {
         TRACE("(%p)->(IID_IRegExp2 %p)\n", this, ppv);
         *ppv = static_cast<IRegExp2 *>(this);
-    } else if (IsEqualGUID(riid, IID_IRegExp)) {
-        TRACE("(%p)->(IID_IRegExp %p)\n", this, ppv);
-        *ppv = static_cast<IRegExp *>(this);
     } else {
         FIXME("(%p)->(%s %p)\n", this, debugstr_guid(riid), ppv);
         *ppv = NULL;
@@ -910,6 +897,28 @@ HRESULT STDMETHODCALLTYPE RegExp2::put_Multiline(VARIANT_BOOL multiline)
     return S_OK;
 }
 
+HRESULT STDMETHODCALLTYPE RegExp2::get_Singleline(VARIANT_BOOL *pSingleline)
+{
+    TRACE("(%p)->(%p)\n", this, pSingleline);
+
+    if (!pSingleline)
+        return E_POINTER;
+
+    *pSingleline = flags & REG_SINGLELINE ? VARIANT_TRUE : VARIANT_FALSE;
+    return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE RegExp2::put_Singleline(VARIANT_BOOL singleline)
+{
+    TRACE("(%p)->(%s)\n", this, singleline ? "true" : "false");
+
+    if (singleline)
+        flags |= REG_SINGLELINE;
+    else
+        flags &= ~REG_SINGLELINE;
+    return S_OK;
+}
+
 HRESULT STDMETHODCALLTYPE RegExp2::Execute(BSTR source, IDispatch **ppMatches)
 {
     RE_PREFIX::wcmatch result;
@@ -975,34 +984,6 @@ HRESULT STDMETHODCALLTYPE RegExp2::Test(BSTR source, VARIANT_BOOL *pMatch)
     return hres;
 }
 
-// class AutoBSTR is modified from code found at
-// https://github.com/microsoft/print-oem-samples
-// Copyright (c) Microsoft Corporation
-// SPDX-License-Identifier: MIT
-
-class AutoBSTR
-{
-public:
-    AutoBSTR(BSTR string = NULL)
-        : string(string)
-    { }
-
-    ~AutoBSTR() {
-        ::SysFreeString(string);
-    }
-
-    BSTR* Get() {
-        return &string;
-    }
-
-    operator BSTR() const {
-        return string;
-    }
-
-private:
-    BSTR string;
-};
-
 class StrBuf
     : public ZeroInit<StrBuf>
 {
@@ -1059,23 +1040,16 @@ HRESULT StrBuf::append(const WCHAR *str, SIZE_T len)
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE RegExp2::Replace(BSTR source, VARIANT replaceVar, BSTR *pDestString)
+HRESULT STDMETHODCALLTYPE RegExp2::Replace(BSTR source, BSTR replace, BSTR *pDestString)
 {
     StrBuf buf;
     RE_PREFIX::wcmatch result;
-    VARIANT strv;
-    HRESULT hres;
+    HRESULT hres = S_OK;
 
-    TRACE("(%p)->(%s %s %p)\n", this, debugstr_w(source), debugstr_variant(&replaceVar), pDestString);
+    TRACE("(%p)->(%s %s %p)\n", this, debugstr_w(source), debugstr_w(replace), pDestString);
 
     update();
 
-    V_VT(&strv) = VT_EMPTY;
-    hres = VariantChangeType(&strv, &replaceVar, 0, VT_BSTR);
-    if (FAILED(hres))
-        return hres;
-
-    AutoBSTR const replace = V_BSTR(&strv);
     size_t const replace_len = SysStringLen(replace);
     size_t const source_len = SysStringLen(source);
 
@@ -1159,15 +1133,6 @@ HRESULT STDMETHODCALLTYPE RegExp2::Replace(BSTR source, VARIANT replaceVar, BSTR
     return hres;
 }
 
-HRESULT STDMETHODCALLTYPE RegExp2::Replace(BSTR source, BSTR replace, BSTR *pDestString)
-{
-    VARIANT replaceVar;
-
-    V_VT(&replaceVar) = VT_BSTR;
-    V_BSTR(&replaceVar) = replace;
-    return Replace(source, replaceVar, pDestString);
-}
-
 void RegExp2::update()
 {
     if (state != flags) {
@@ -1177,7 +1142,6 @@ void RegExp2::update()
 }
 
 ITypeInfo *Dispatch<IRegExp2>::typeinfo = NULL;
-ITypeInfo *Dispatch<IRegExp>::typeinfo = NULL;
 
 HRESULT RegExp2::create(IDispatch **ret)
 {
@@ -1229,11 +1193,8 @@ HRESULT STDMETHODCALLTYPE RegExp2Factory::CreateInstance(IUnknown *pUnkOuter, RE
         GetModuleFileNameW(g_module, szFileName, MAX_PATH);
         if (FAILED(hres_once = LoadTypeLib(szFileName, &typelib))) continue;
         if (FAILED(hres_once = Dispatch<IRegExp2>::InitTypeInfo(typelib))) continue;
-        if (FAILED(hres_once = Dispatch<IRegExp>::InitTypeInfo(typelib))) continue;
         if (FAILED(hres_once = Dispatch<IMatch2>::InitTypeInfo(typelib))) continue;
-        if (FAILED(hres_once = Dispatch<IMatch>::InitTypeInfo(typelib))) continue;
         if (FAILED(hres_once = Dispatch<IMatchCollection2>::InitTypeInfo(typelib))) continue;
-        if (FAILED(hres_once = Dispatch<IMatchCollection>::InitTypeInfo(typelib))) continue;
         if (FAILED(hres_once = Dispatch<ISubMatches>::InitTypeInfo(typelib))) continue;
     }
 

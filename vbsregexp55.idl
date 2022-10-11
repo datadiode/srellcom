@@ -23,6 +23,7 @@ import "oaidl.idl";
 #define DISPID_REGEXP_TEST                      10005
 #define DISPID_REGEXP_REPLACE                   10006
 #define DISPID_REGEXP_MULTILINE                 10007
+#define DISPID_REGEXP_SINGLELINE                10008
 
 [
     helpstring("Microsoft VBScript Regular Expressions 5.5"),
@@ -32,51 +33,6 @@ import "oaidl.idl";
 library VBScript_RegExp_55
 {
     importlib("stdole2.tlb");
-
-    [
-        dual,
-        hidden,
-        nonextensible,
-        odl,
-        oleautomation,
-        uuid(3f4daca0-81dc-11e1-b0c4-0800200c9a66),
-    ]
-    interface IRegExp : IDispatch
-    {
-        [id(DISPID_REGEXP_PATTERN), propget]
-        HRESULT Pattern([out, retval] BSTR *pPattern);
-
-        [id(DISPID_REGEXP_PATTERN), propput]
-        HRESULT Pattern([in] BSTR pPattern);
-
-        [id(DISPID_REGEXP_IGNORECASE), propget]
-        HRESULT IgnoreCase([out, retval] VARIANT_BOOL *pIgnoreCase);
-
-        [id(DISPID_REGEXP_IGNORECASE), propput]
-        HRESULT IgnoreCase([in] VARIANT_BOOL pIgnoreCase);
-
-        [id(DISPID_REGEXP_GLOBAL), propget]
-        HRESULT Global([out, retval] VARIANT_BOOL *pGlobal);
-
-        [id(DISPID_REGEXP_GLOBAL), propput]
-        HRESULT Global([in] VARIANT_BOOL pGlobal);
-
-        [id(DISPID_REGEXP_EXECUTE)]
-        HRESULT Execute(
-                [in] BSTR sourceString,
-                [out, retval] IDispatch **ppMatches);
-
-        [id(DISPID_REGEXP_TEST)]
-        HRESULT Test(
-                [in] BSTR sourceString,
-                [out, retval] VARIANT_BOOL *pMatch);
-
-        [id(DISPID_REGEXP_REPLACE)]
-        HRESULT Replace(
-                [in] BSTR sourceString,
-                [in] BSTR replaceString,
-                [out, retval] BSTR *pDestString);
-    }
 
     [
         dual,
@@ -112,6 +68,12 @@ library VBScript_RegExp_55
         [id(DISPID_REGEXP_MULTILINE), propput]
         HRESULT Multiline([in] VARIANT_BOOL pMultiline);
 
+        [id(DISPID_REGEXP_SINGLELINE), propget]
+        HRESULT Singleline([out, retval] VARIANT_BOOL *pMultiline);
+
+        [id(DISPID_REGEXP_SINGLELINE), propput]
+        HRESULT Singleline([in] VARIANT_BOOL pMultiline);
+
         [id(DISPID_REGEXP_EXECUTE)]
         HRESULT Execute(
                 [in] BSTR sourceString,
@@ -125,28 +87,8 @@ library VBScript_RegExp_55
         [id(DISPID_REGEXP_REPLACE)]
         HRESULT Replace(
                 [in] BSTR sourceString,
-                [in] VARIANT replaceVar,
+                [in] BSTR replaceString,
                 [out, retval] BSTR *pDestString);
-    }
-
-    [
-        dual,
-        hidden,
-        nonextensible,
-        odl,
-        oleautomation,
-        uuid(3f4daca1-81dc-11e1-b0c4-0800200c9a66)
-    ]
-    interface IMatch : IDispatch
-    {
-        [id(DISPID_VALUE), propget]
-        HRESULT Value([out, retval] BSTR *pValue);
-
-        [id(DISPID_MATCH_FIRSTINDEX), propget]
-        HRESULT FirstIndex([out, retval] LONG *pFirstIndex);
-
-        [id(DISPID_MATCH_LENGTH), propget]
-        HRESULT Length([out, retval] LONG *pLength);
     }
 
     [
@@ -170,28 +112,6 @@ library VBScript_RegExp_55
 
         [id(DISPID_MATCH_SUBMATCHES), propget]
         HRESULT SubMatches([out, retval] IDispatch **ppSubMatches);
-    }
-
-    [
-        dual,
-        hidden,
-        nonextensible,
-        odl,
-        oleautomation,
-        uuid(3f4daca2-81dc-11e1-b0c4-0800200c9a66)
-    ]
-    interface IMatchCollection : IDispatch
-    {
-        [id(DISPID_VALUE), propget]
-        HRESULT Item(
-                [in] LONG index,
-                [out, retval] IDispatch **ppMatch);
-
-        [id(DISPID_MATCHCOLLECTION_COUNT), propget]
-        HRESULT Count([out, retval] LONG *pCount);
-
-        [id(DISPID_NEWENUM), propget]
-        HRESULT _NewEnum([out, retval] IUnknown **ppEnum);
     }
 
     [
