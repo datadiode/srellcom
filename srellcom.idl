@@ -26,11 +26,11 @@ import "oaidl.idl";
 #define DISPID_REGEXP_SINGLELINE                10008
 
 [
-    helpstring("Microsoft VBScript Regular Expressions 5.5"),
+    helpstring("SRELL Regular Expression COM Wrapper"),
     uuid(3f4daca7-81dc-11e1-b0c4-0800200c9a66),
-    version(5.5)
+    version(1.0)
 ]
-library VBScript_RegExp_55
+library SRELL_RegExp
 {
     importlib("stdole2.tlb");
 
@@ -42,7 +42,7 @@ library VBScript_RegExp_55
         oleautomation,
         uuid(3f4dacb0-81dc-11e1-b0c4-0800200c9a66)
     ]
-    interface IRegExp2 : IDispatch
+    interface IRegExp : IDispatch
     {
         [id(DISPID_REGEXP_PATTERN), propget]
         HRESULT Pattern([out, retval] BSTR *pPattern);
@@ -99,7 +99,7 @@ library VBScript_RegExp_55
         nonextensible,
         oleautomation
     ]
-    interface IMatch2 : IDispatch
+    interface IMatch : IDispatch
     {
         [id(DISPID_VALUE), propget]
         HRESULT Value([out, retval] BSTR *pValue);
@@ -122,7 +122,7 @@ library VBScript_RegExp_55
         oleautomation,
         uuid(3f4dacb2-81dc-11e1-b0c4-0800200c9a66)
     ]
-    interface IMatchCollection2 : IDispatch
+    interface IMatchCollection : IDispatch
     {
         [id(DISPID_VALUE), propget]
         HRESULT Item(
@@ -163,7 +163,7 @@ library VBScript_RegExp_55
     ]
     coclass RegExp
     {
-        [default] interface IRegExp2;
+        [default] interface IRegExp;
     }
 
     [
@@ -172,7 +172,7 @@ library VBScript_RegExp_55
     ]
     coclass Match
     {
-        [default] interface IMatch2;
+        [default] interface IMatch;
     }
 
     [
@@ -181,7 +181,7 @@ library VBScript_RegExp_55
     ]
     coclass MatchCollection
     {
-        [default] interface IMatchCollection2;
+        [default] interface IMatchCollection;
     }
 
     [

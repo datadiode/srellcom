@@ -230,22 +230,13 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="vbregexp.cpp" />
+    <ClCompile Include="srellcom.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="srellcom.def" />
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="vbsregexp55.idl">
-      <RedirectOutputAndErrors Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </RedirectOutputAndErrors>
-      <RedirectOutputAndErrors Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </RedirectOutputAndErrors>
-      <RedirectOutputAndErrors Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </RedirectOutputAndErrors>
-      <RedirectOutputAndErrors Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </RedirectOutputAndErrors>
-    </Midl>
+    <Midl Include="srellcom.idl" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="srellcom.rc">
