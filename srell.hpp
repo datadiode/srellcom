@@ -1,6 +1,6 @@
 /*****************************************************************************
 **
-**  SRELL (std::regex-like library) version 4.001
+**  SRELL (std::regex-like library) version 4.003
 **
 **  Copyright (c) 2012-2022, Nozomu Katoo. All rights reserved.
 **
@@ -14704,7 +14704,7 @@ struct re_state
 		//  is_not/dont_push:   -
 
 	//  st_epsilon,                 //  0x02
-		//  char/number:        -
+		//  char/number:        - (some symbols used only in compiler).
 		//  next1:              gen.
 		//  next2:              alt.
 		//  quantifiers:        -
@@ -14889,7 +14889,7 @@ struct re_state
 
 	bool is_asterisk_or_plus_for_onelen_atom() const
 	{
-		return type == st_epsilon && next1 == 1 && next2 == 2 && quantifier.is_asterisk_or_plus();
+		return type == st_epsilon && ((next1 == 1 && next2 == 2) || (next1 == 2 && next2 == 1)) && quantifier.is_asterisk_or_plus();
 	}
 };
 //  re_state
@@ -16832,7 +16832,6 @@ private:
 					firstatom.quantifier = quantifier;
 
 				piece_with_quantifier.push_back(atom);
-				//      (push)
 			}
 
 			if (piece.size() >= 2 && firstatom.type == st_roundbracket_open && piece[1].type == st_roundbracket_pop)
@@ -17991,6 +17990,7 @@ private:
 	{
 		atom.next2 = 1;
 		atom.type = st_backreference;
+		atom.quantifier.atleast = 0;
 
 //		atom.quantifier.atleast = cstate.atleast_widths_of_brackets[atom.number - 1];
 			//  Moved to check_backreferences().
@@ -18593,6 +18593,7 @@ private:
 
 								brs.type = st_epsilon;
 								brs.next2 = 0;
+								brs.character = meta_char::mc_escape;
 							}
 							break;
 						}
