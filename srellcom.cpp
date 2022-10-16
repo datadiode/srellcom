@@ -10,7 +10,9 @@
  */
 
 #include <windows.h>
+#if defined(_DEBUG) && !defined(_WIN32_WCE)
 #include "vld.h"
+#endif
 #define RE_PREFIX srell
 #include "srell.hpp"
 #include "srellcom_h.h"
