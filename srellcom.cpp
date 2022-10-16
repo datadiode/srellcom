@@ -1288,7 +1288,8 @@ STDAPI DllRegisterServer()
         }
 
         HKEY hkey;
-        long err = RegCreateKeyW(HKEY_CLASSES_ROOT, pszKeyName, &hkey);
+        long err = RegCreateKeyExW(HKEY_CLASSES_ROOT, pszKeyName, 0, NULL,
+                                   REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hkey, NULL);
         if (err == ERROR_SUCCESS) {
             if (pszValue) {
                 err = RegSetValueExW(hkey, pszValueName, 0,
