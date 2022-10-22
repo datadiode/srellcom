@@ -1,4 +1,5 @@
 # SRELL Regular Expression COM Wrapper (srellcom)
+[![StandWithUkraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
 
 The srellcom project aims at providing an [SRELL](https://www.akenotsuki.com/misc/srell/en/) based VBScript.RegExp replacement.
 
