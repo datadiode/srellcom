@@ -1244,19 +1244,14 @@ STDAPI DllCanUnloadNow()
 
 #define OBJECT_ID L"SRELL.RegExp"
 #define OBJECT_DESCRIPTION L"SRELL Regular Expression"
-#define OBJECT_VERSION L"1"
 #define CLS_ID L"{3f4daca4-81dc-11e1-b0c4-0800200c9a66}"
 
 LPCWSTR const g_RegTable[][3] = {
     { OBJECT_ID, 0, OBJECT_DESCRIPTION },
     { OBJECT_ID L"\\CLSID", 0, CLS_ID },
 
-    { OBJECT_ID L"." OBJECT_VERSION, OBJECT_DESCRIPTION },
-    { OBJECT_ID L"." OBJECT_VERSION L"\\CLSID", 0, CLS_ID },
-
     { L"CLSID\\" CLS_ID, 0, OBJECT_DESCRIPTION },
-    { L"CLSID\\" CLS_ID L"\\ProgID", 0, OBJECT_ID L"." OBJECT_VERSION },
-    { L"CLSID\\" CLS_ID L"\\VersionIndependentProgID", 0, OBJECT_ID },
+    { L"CLSID\\" CLS_ID L"\\ProgID", 0, OBJECT_ID },
     { L"CLSID\\" CLS_ID L"\\InprocServer32", 0, (LPCWSTR)-1 },
 };
 
