@@ -47,9 +47,9 @@ static inline BOOL is_digit(WCHAR c)
 // SPDX-License-Identifier: MIT
 #define init_once(...) \
     for (static LONG volatile static_init_once = 0;;) \
-    if (LONG init_once = _InterlockedCompareExchange(&static_init_once, 1, 0)) \
+    if (LONG init_once = InterlockedCompareExchange(&static_init_once, 1, 0)) \
     { if (init_once == 3) break; Sleep(static_cast<DWORD>(__VA_ARGS__.0)); } \
-    else while (_InterlockedIncrement(&static_init_once) == 2)
+    else while (InterlockedIncrement(&static_init_once) == 2)
 
 HMODULE g_module = NULL;
 

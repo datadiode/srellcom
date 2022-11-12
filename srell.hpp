@@ -37,7 +37,9 @@
 #include <climits>
 #include <cwchar>
 #include <string>
+#ifndef SRELL_NO_LOCALE
 #include <locale>
+#endif
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1048,7 +1050,9 @@ public:
 
 	typedef charT char_type;
 	typedef std::basic_string<char_type> string_type;
+#ifndef SRELL_NO_LOCALE
 	typedef std::locale locale_type;
+#endif
 //	typedef bitmask_type char_class_type;
 	typedef int char_class_type;
 
@@ -1107,6 +1111,7 @@ public:
 		return -1;
 	}
 
+#ifndef SRELL_NO_LOCALE
 	locale_type imbue(const locale_type /* l */)
 	{
 		return locale_type();
@@ -1116,6 +1121,7 @@ public:
 	{
 		return locale_type();
 	}
+#endif
 };	//  regex_traits
 
 template <class charT>
@@ -21531,7 +21537,9 @@ public:
 	typedef traits traits_type;
 	typedef typename traits::string_type string_type;
 	typedef regex_constants::syntax_option_type flag_type;
+#ifndef SRELL_NO_LOCALE
 	typedef typename traits::locale_type locale_type;
+#endif
 
 	//  28.8.1, constants:
 	//  [7.8.1] constants
@@ -21693,6 +21701,7 @@ public:
 		return this->soflags;
 	}
 
+#ifndef SRELL_NO_LOCALE
 	//  28.8.5, locale:
 	//  [7.8.5] locale
 	locale_type imbue(locale_type loc)
@@ -21704,6 +21713,7 @@ public:
 	{
 		return this->traits_inst.getloc();
 	}
+#endif
 
 	//  28.8.6, swap:
 	//  [7.8.6] swap
