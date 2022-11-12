@@ -68,7 +68,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				LinkIncremental="2"
+				LinkIncremental="1"
+				ModuleDefinitionFile="srellcom.def"
 				GenerateDebugInformation="true"
 				SubSystem="8"
 				TargetMachine="16"
@@ -149,7 +150,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				LinkIncremental="2"
+				LinkIncremental="1"
+				ModuleDefinitionFile="srellcom.def"
 				GenerateDebugInformation="true"
 				SubSystem="8"
 				TargetMachine="1"
@@ -229,7 +231,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				LinkIncremental="2"
+				LinkIncremental="1"
+				ModuleDefinitionFile="srellcom.def"
 				GenerateDebugInformation="true"
 				SubSystem="8"
 				OptimizeReferences="2"
@@ -311,7 +314,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				LinkIncremental="2"
+				LinkIncremental="1"
+				ModuleDefinitionFile="srellcom.def"
 				GenerateDebugInformation="true"
 				SubSystem="8"
 				OptimizeReferences="2"
