@@ -72,6 +72,7 @@
 				ModuleDefinitionFile="srellcom.def"
 				GenerateDebugInformation="true"
 				SubSystem="8"
+				ImportLibrary="$(IntDir)$(TargetName).lib"
 				TargetMachine="16"
 			/>
 			<Tool
@@ -154,6 +155,7 @@
 				ModuleDefinitionFile="srellcom.def"
 				GenerateDebugInformation="true"
 				SubSystem="8"
+				ImportLibrary="$(IntDir)$(TargetName).lib"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -237,6 +239,7 @@
 				SubSystem="8"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
+				ImportLibrary="$(IntDir)$(TargetName).lib"
 				TargetMachine="16"
 			/>
 			<Tool
@@ -320,6 +323,7 @@
 				SubSystem="8"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
+				ImportLibrary="$(IntDir)$(TargetName).lib"
 				TargetMachine="1"
 			/>
 			<Tool
