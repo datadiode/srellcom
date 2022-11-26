@@ -1,6 +1,6 @@
 /*****************************************************************************
 **
-**  SRELL (std::regex-like library) version 4.006
+**  SRELL (std::regex-like library) version 4.007
 **
 **  Copyright (c) 2012-2022, Nozomu Katoo. All rights reserved.
 **
@@ -274,7 +274,8 @@ namespace srell
 			//  (Only in v-mode) \P or a negated character class contained a property of strings.
 
 		static const error_type error_modifier   = 118;
-			//  A specific flag modifier appears more then once.
+			//  A specific flag modifier appeared more then once, or the un-bounded form
+			//  ((?ism-ism)) appeared at a position other than the beginning of the expression.
 
 #if defined(SRELL_FIXEDWIDTHLOOKBEHIND)
 		static const error_type error_lookbehind = 200;
@@ -450,7 +451,9 @@ private:
 			static const uchar32 ch_c = 0x63;	//  'c'
 			static const uchar32 ch_d = 0x64;	//  'd'
 			static const uchar32 ch_f = 0x66;	//  'f'
+			static const uchar32 ch_i = 0x69;	//  'i'
 			static const uchar32 ch_k = 0x6b;	//  'k'
+			static const uchar32 ch_m = 0x6d;	//  'm'
 			static const uchar32 ch_n = 0x6e;	//  'n'
 			static const uchar32 ch_p = 0x70;	//  'p'
 			static const uchar32 ch_q = 0x71;	//  'q'
@@ -14993,6 +14996,8 @@ struct re_flags
 template <typename charT>
 struct re_compiler_state : public re_flags
 {
+	const uchar32 *begin;
+
 #if !defined(SRELL_NO_NAMEDCAPTURE)
 	groupname_mapper<charT> unresolved_gnames;
 #endif
@@ -15001,9 +15006,11 @@ struct re_compiler_state : public re_flags
 	identifier_charclass idchecker;
 #endif
 
-	void reset(const regex_constants::syntax_option_type flags)
+	void reset(const regex_constants::syntax_option_type flags, const uchar32 *const b)
 	{
 		re_flags::reset(flags);
+
+		begin = b;
 
 #if !defined(SRELL_NO_NAMEDCAPTURE)
 		unresolved_gnames.clear();
@@ -16423,15 +16430,17 @@ private:
 	typedef simple_array<uchar32> u32array;
 	typedef typename u32array::size_type u32array_size_type;
 
+	typedef re_compiler_state<charT> cstate_type;
+
 	bool compile_core(const uchar32 *begin, const uchar32 *const end, const regex_constants::syntax_option_type flags)
 	{
 		re_quantifier piecesize;
-		re_compiler_state<charT> cstate;
+		cstate_type cstate;
 		state_type atom;
 
 		this->reset(flags);
 //		this->soflags = flags;
-		cstate.reset(flags);
+		cstate.reset(flags, begin);
 
 		atom.reset();
 		atom.type = st_epsilon;
@@ -16474,7 +16483,7 @@ private:
 		return true;
 	}
 
-	bool make_nfa_states(state_array &piece, re_quantifier &piecesize, const uchar32 *&curpos, const uchar32 *const end, re_compiler_state<charT> &cstate)
+	bool make_nfa_states(state_array &piece, re_quantifier &piecesize, const uchar32 *&curpos, const uchar32 *const end, cstate_type &cstate)
 	{
 		typename state_array::size_type prevbranch_end = 0;
 		state_type atom;
@@ -16528,7 +16537,7 @@ private:
 		return true;
 	}
 
-	bool make_branch(state_array &branch, re_quantifier &branchsize, const uchar32 *&curpos, const uchar32 *const end, re_compiler_state<charT> &cstate)
+	bool make_branch(state_array &branch, re_quantifier &branchsize, const uchar32 *&curpos, const uchar32 *const end, cstate_type &cstate)
 	{
 		state_array piece;
 		state_array piece_with_quantifier;
@@ -16606,7 +16615,7 @@ private:
 		}
 	}
 
-	bool get_atom(state_array &piece, re_quantifier &piecesize, const uchar32 *&curpos, const uchar32 *const end, re_compiler_state<charT> &cstate)
+	bool get_atom(state_array &piece, re_quantifier &piecesize, const uchar32 *&curpos, const uchar32 *const end, cstate_type &cstate)
 	{
 		state_type atom;
 
@@ -16693,7 +16702,7 @@ private:
 
 	//  '('.
 
-	bool get_piece_in_roundbrackets(state_array &piece, re_quantifier &piecesize, const uchar32 *&curpos, const uchar32 *const end, re_compiler_state<charT> &cstate)
+	bool get_piece_in_roundbrackets(state_array &piece, re_quantifier &piecesize, const uchar32 *&curpos, const uchar32 *const end, cstate_type &cstate)
 	{
 		const re_flags originalflags(cstate);
 		state_type atom;
@@ -16708,6 +16717,12 @@ private:
 		{
 			if (!extended_roundbrackets(piece, atom, ++curpos, end, cstate))
 				return false;
+
+			if (atom.type == st_roundbracket_close)
+			{
+				++curpos;
+				return true;
+			}
 		}
 
 		if (atom.type == st_roundbracket_open)
@@ -16780,7 +16795,7 @@ private:
 		return true;
 	}
 
-	bool extended_roundbrackets(state_array &piece, state_type &atom, const uchar32 *&curpos, const uchar32 *const end, re_compiler_state<charT> &cstate)
+	bool extended_roundbrackets(state_array &piece, state_type &atom, const uchar32 *&curpos, const uchar32 *const end, cstate_type &cstate)
 	{
 #if !defined(SRELL_FIXEDWIDTHLOOKBEHIND)
 		bool lookbehind = false;
@@ -16817,11 +16832,6 @@ private:
 
 		switch (atom.character)
 		{
-		case meta_char::mc_colon:
-			atom.type = st_epsilon;
-			atom.quantifier.atleast = this->number_of_brackets;
-			break;
-
 		case meta_char::mc_exclam:	//  '!':
 			atom.is_not = true;
 			//@fallthrough@
@@ -16834,6 +16844,7 @@ private:
 #endif
 
 #if defined(SRELL_ENABLE_GT)
+			//@fallthrough@
 		case meta_char::mc_gt:
 #endif
 			atom.type = st_lookaround_open;
@@ -16841,13 +16852,110 @@ private:
 			break;
 
 		default:
-			this->throw_error(regex_constants::error_paren);
+#if !defined(SRELL_NO_UBMOD)
+			if (!parse_modflags(atom, curpos, end, cstate))
+#endif
+			{
+				this->throw_error(regex_constants::error_paren);
+			}
+
+			if (*curpos == meta_char::mc_rbracl)
+			{
+				atom.type = st_roundbracket_close;
+				return true;
+			}
+			//@fallthrough@
+
+		case meta_char::mc_colon:
+			atom.type = st_epsilon;
+			atom.quantifier.atleast = this->number_of_brackets;
 		}
 
 		++curpos;
 		piece.push_back(atom);
 		return true;
 	}
+
+#if !defined(SRELL_NO_UBMOD)
+
+	bool parse_modflags(state_type &atom, const uchar32 *&curpos, const uchar32 *const end, cstate_type &cstate)
+	{
+		const u32array_size_type boffset = curpos - cstate.begin;
+		regex_constants::syntax_option_type modified = regex_constants::ECMAScript;
+		regex_constants::syntax_option_type localflags = this->soflags;
+		bool negate = false;
+		bool flagerror = false;
+
+		for (;;)
+		{
+			switch (atom.character)
+			{
+#if 0
+			case meta_char::mc_colon:	//  ':':
+				//  (?ims-ims:...)
+				break;
+#endif
+			case meta_char::mc_rbracl:	//  ')':
+				if (boffset == 2 && modified != regex_constants::ECMAScript)
+				{
+					this->soflags = localflags;
+					return true;
+				}
+				flagerror = true;	//  "(?)" or "(?-)"
+				break;
+
+			case meta_char::mc_minus:	//  '-':
+				if (negate)
+					flagerror = true;
+				else
+					negate = true;
+				break;
+
+			case char_alnum::ch_i:	//  'i':
+				if (modified & regex_constants::icase)
+					flagerror = true;
+				modified |= regex_constants::icase;
+				if (!negate)
+					localflags |= regex_constants::icase;
+				else
+					localflags &= ~regex_constants::icase;
+				break;
+
+			case char_alnum::ch_m:	//  'm':
+				if (modified & regex_constants::multiline)
+					flagerror = true;
+				modified |= regex_constants::multiline;
+				if (!negate)
+					localflags |= regex_constants::multiline;
+				else
+					localflags &= ~regex_constants::multiline;
+				break;
+
+			case char_alnum::ch_s:	//  's':
+				if (modified & regex_constants::dotall)
+					flagerror = true;
+				modified |= regex_constants::dotall;
+				if (!negate)
+					localflags |= regex_constants::dotall;
+				else
+					localflags &= ~regex_constants::dotall;
+				break;
+
+			default:
+				return false;
+			}
+
+			if (flagerror)
+				this->throw_error(regex_constants::error_modifier);
+
+			if (++curpos == end)
+				return false;
+
+			atom.character = *curpos;
+		}
+	}
+
+#endif	//  !defined(SRELL_NO_UBMOD)
 
 	void push_bracket_open(state_array &piece, state_type &atom)
 	{
@@ -16863,7 +16971,7 @@ private:
 		piece.push_back(atom);
 	}
 
-	void set_bracket_close(state_array &piece, state_type &atom, const re_quantifier & /* piecesize */, re_compiler_state<charT> & /* cstate */)
+	void set_bracket_close(state_array &piece, state_type &atom, const re_quantifier & /* piecesize */, cstate_type & /* cstate */)
 	{
 //		uint_l32 max_bracketno = atom.number;
 
@@ -17118,7 +17226,7 @@ private:
 	}
 
 #if !defined(SRELL_NO_NAMEDCAPTURE)
-	bool parse_groupname(const uchar32 *&curpos, const uchar32 *const end, re_compiler_state<charT> &cstate)
+	bool parse_groupname(const uchar32 *&curpos, const uchar32 *const end, cstate_type &cstate)
 	{
 		const gname_string groupname = get_groupname(curpos, end, cstate);
 
@@ -17131,7 +17239,7 @@ private:
 
 	//  '['.
 
-	bool register_character_class(state_type &atom, const uchar32 *&curpos, const uchar32 *const end, const re_compiler_state<charT> & /* cstate */)
+	bool register_character_class(state_type &atom, const uchar32 *&curpos, const uchar32 *const end, const cstate_type & /* cstate */)
 	{
 		range_pairs ranges;
 		range_pair code_range;
@@ -17265,7 +17373,7 @@ private:
 
 #if !defined(SRELL_NO_VMODE) && !defined(SRELL_NO_UNICODE_PROPERTY)
 
-	bool parse_charclass_v(state_array &piece, re_quantifier &piecesize, const uchar32 *&curpos, const uchar32 *const end, re_compiler_state<charT> &cstate)
+	bool parse_charclass_v(state_array &piece, re_quantifier &piecesize, const uchar32 *&curpos, const uchar32 *const end, cstate_type &cstate)
 	{
 		posdata_holder pos;
 
@@ -17297,7 +17405,7 @@ private:
 		return true;
 	}
 
-	void parse_unicharset(posdata_holder &basepos, const uchar32 *&curpos, const uchar32 *const end, const re_compiler_state<charT> &cstate)
+	void parse_unicharset(posdata_holder &basepos, const uchar32 *&curpos, const uchar32 *const end, const cstate_type &cstate)
 	{
 		enum operation_type
 		{
@@ -17525,7 +17633,7 @@ private:
 		state_type &ccatom,
 		const uchar32 *&curpos,
 		const uchar32 *const end,
-		const re_compiler_state<charT> &cstate,
+		const cstate_type &cstate,
 		const bool no_ccesc
 	)
 	{
@@ -17599,7 +17707,7 @@ private:
 		return false;
 	}
 
-	bool parse_escape_q_vmode(posdata_holder &pos, const uchar32 *&curpos, const uchar32 *const end, const re_compiler_state<charT> &cstate)
+	bool parse_escape_q_vmode(posdata_holder &pos, const uchar32 *&curpos, const uchar32 *const end, const cstate_type &cstate)
 	{
 		if (curpos == end || *curpos != meta_char::mc_cbraop)	//  '{'
 			this->throw_error(regex_constants::error_escape);
@@ -17990,7 +18098,7 @@ private:
 		, state_array &
 		, re_quantifier &
 #endif
-		, const uchar32 *&curpos, const uchar32 *const end, /* const */ re_compiler_state<charT> &cstate)
+		, const uchar32 *&curpos, const uchar32 *const end, /* const */ cstate_type &cstate)
 	{
 		if (curpos == end)
 			this->throw_error(regex_constants::error_escape);
@@ -18062,7 +18170,7 @@ private:
 		return true;
 	}
 
-	bool parse_backreference_number(state_type &atom, const uchar32 *&curpos, const uchar32 *const end, const re_compiler_state<charT> &cstate)
+	bool parse_backreference_number(state_type &atom, const uchar32 *&curpos, const uchar32 *const end, const cstate_type &cstate)
 	{
 		const uchar32 backrefno = translate_numbers(curpos, end, 10, 0, 0, 0xfffffffe);
 			//  22.2.1.1 Static Semantics: Early Errors:
@@ -18077,7 +18185,7 @@ private:
 		return backreference_postprocess(atom, cstate);
 	}
 
-	bool backreference_postprocess(state_type &atom, const re_compiler_state<charT> & /* cstate */) const
+	bool backreference_postprocess(state_type &atom, const cstate_type & /* cstate */) const
 	{
 		atom.next2 = 1;
 		atom.type = st_backreference;
@@ -18087,7 +18195,7 @@ private:
 	}
 
 #if !defined(SRELL_NO_NAMEDCAPTURE)
-	bool parse_backreference_name(state_type &atom, const uchar32 *&curpos, const uchar32 *const end, re_compiler_state<charT> &cstate)
+	bool parse_backreference_name(state_type &atom, const uchar32 *&curpos, const uchar32 *const end, cstate_type &cstate)
 	{
 		if (++curpos == end || *curpos != meta_char::mc_lt)
 			this->throw_error(regex_constants::error_escape);
@@ -18109,9 +18217,9 @@ private:
 	}
 
 #if !defined(SRELL_NO_UNICODE_PROPERTY)
-	gname_string get_groupname(const uchar32 *&curpos, const uchar32 *const end, re_compiler_state<charT> &cstate)
+	gname_string get_groupname(const uchar32 *&curpos, const uchar32 *const end, cstate_type &cstate)
 #else
-	gname_string get_groupname(const uchar32 *&curpos, const uchar32 *const end, re_compiler_state<charT> &)
+	gname_string get_groupname(const uchar32 *&curpos, const uchar32 *const end, cstate_type &)
 #endif
 	{
 		charT mbstr[utf_traits::maxseqlen];
@@ -18159,7 +18267,7 @@ private:
 
 #if !defined(SRELL_NO_VMODE) && !defined(SRELL_NO_UNICODE_PROPERTY)
 
-	bool parse_escape_p_vmode(posdata_holder &pos, state_type &patom, const uchar32 *&curpos, const uchar32 *const end, const re_compiler_state<charT> &cstate)
+	bool parse_escape_p_vmode(posdata_holder &pos, state_type &patom, const uchar32 *&curpos, const uchar32 *const end, const cstate_type &cstate)
 	{
 		if (curpos == end)
 			this->throw_error(regex_constants::error_escape);
@@ -18619,9 +18727,9 @@ private:
 		return -1;
 	}
 
-	bool check_backreferences(re_compiler_state<charT> &cstate)
+	bool check_backreferences(cstate_type &cstate)
 	{
-		for (typename state_array::size_type backrefpos = 0; backrefpos < this->NFA_states.size(); ++backrefpos)
+		for (state_size_type backrefpos = 1; backrefpos < this->NFA_states.size(); ++backrefpos)
 		{
 			state_type &brs = this->NFA_states[backrefpos];
 
