@@ -1,6 +1,6 @@
 /*****************************************************************************
 **
-**  SRELL (std::regex-like library) version 4.005
+**  SRELL (std::regex-like library) version 4.006
 **
 **  Copyright (c) 2012-2022, Nozomu Katoo. All rights reserved.
 **
@@ -14713,6 +14713,8 @@ struct re_state
 	union
 	{
 		uchar32 character;	//  For character.
+			//  (Special case) in [0] represents an entry point code unit if the firstchar
+			//    class consists of a single code unit; otherwise invalid_u32value.
 		uint_l32 number;	//  For character_class, brackets, counter, repeat, backreference.
 	};
 
@@ -15381,7 +15383,9 @@ public:
 			this->u32string_ = that.u32string_;
 
 			this->bmtable_ = that.bmtable_;
+#if defined(SRELLDBG_NO_SCFINDER)
 			this->repseq_ = that.repseq_;
+#endif
 		}
 		return *this;
 	}
@@ -15394,7 +15398,9 @@ public:
 			this->u32string_ = std::move(that.u32string_);
 
 			this->bmtable_ = std::move(that.bmtable_);
+#if defined(SRELLDBG_NO_SCFINDER)
 			this->repseq_ = std::move(that.repseq_);
+#endif
 		}
 		return *this;
 	}
@@ -15405,19 +15411,31 @@ public:
 		u32string_.clear();
 
 		bmtable_.clear();
+#if defined(SRELLDBG_NO_SCFINDER)
 		repseq_.clear();
+#endif
 	}
 
+#if defined(SRELLDBG_NO_SCFINDER)
 	void setup(const simple_array<uchar32> &u32s, const bool icase)
+#else
+	void setup(const simple_array<uchar32> &u32s)
+#endif
 	{
 		u32string_ = u32s;
 		setup_();
 
+#if defined(SRELLDBG_NO_SCFINDER)
 		if (!icase)
 			setup_for_casesensitive();
 		else
+#endif
+		{
 			setup_for_icase();
+		}
 	}
+
+#if defined(SRELLDBG_NO_SCFINDER)
 
 	template <typename RandomAccessIterator>
 	bool do_casesensitivesearch(re_search_state<RandomAccessIterator> &sstate, const std::random_access_iterator_tag) const
@@ -15475,6 +15493,8 @@ public:
 			offset = bmtable_[*begin & 0xff];
 		}
 	}
+
+#endif	//  defined(SRELLDBG_NO_SCFINDER)
 
 	template <typename RandomAccessIterator>
 	bool do_icasesearch(re_search_state<RandomAccessIterator> &sstate, const std::random_access_iterator_tag) const
@@ -15575,6 +15595,8 @@ private:
 		bmtable_.resize(257);
 	}
 
+#if defined(SRELLDBG_NO_SCFINDER)
+
 	void setup_for_casesensitive()
 	{
 		charT mbstr[utf_traits::maxseqlen];
@@ -15598,6 +15620,8 @@ private:
 		for (std::size_t i = 0; i < repseq_lastcharpos_; ++i)
 			bmtable_[repseq_[i] & 0xff] = repseq_lastcharpos_ - i;
 	}
+
+#endif	//  defined(SRELLDBG_NO_SCFINDER)
 
 	void setup_for_icase()
 	{
@@ -15648,7 +15672,9 @@ private:
 	simple_array<uchar32> u32string_;
 //	std::size_t bmtable_[256];
 	simple_array<std::size_t> bmtable_;
+#if defined(SRELLDBG_NO_SCFINDER)
 	simple_array<charT> repseq_;
+#endif
 };
 //  re_bmh
 
@@ -16429,7 +16455,12 @@ private:
 #endif
 
 #if !defined(SRELLDBG_NO_BMH)
-		setup_bmhdata();
+#if !defined(SRELLDBG_NO_SCFINDER)
+		if (this->is_ricase())
+#endif
+		{
+			setup_bmhdata();
+		}
 #endif
 
 		atom.type = st_success;
@@ -18670,14 +18701,20 @@ private:
 
 #if !defined(SRELLDBG_NO_BITSET)
 		this->NFA_states[0].quantifier.atleast = this->character_class.register_newclass(fcc);
+#endif
 
+#if !defined(SRELLDBG_NO_BITSET) || !defined(SRELLDBG_NO_SCFINDER)
 		set_bitset_table(fcc);
 #endif
 	}
 
-#if !defined(SRELLDBG_NO_BITSET)
+#if !defined(SRELLDBG_NO_BITSET) || !defined(SRELLDBG_NO_SCFINDER)
 	void set_bitset_table(const range_pairs &fcc)
 	{
+#if !defined(SRELLDBG_NO_SCFINDER)
+		uchar32 entrychar = constants::max_u32value;
+#endif
+
 		for (typename range_pairs::size_type i = 0; i < fcc.size(); ++i)
 		{
 			const range_pair &range = fcc[i];
@@ -18705,15 +18742,35 @@ private:
 #else
 			for (uchar32 ucp = range.first; ucp <= constants::unicode_max_codepoint; ++ucp)
 			{
-				this->firstchar_class_bs.set(utf_traits::firstcodeunit(ucp) & utf_traits::bitsetmask);
+				const uchar32 firstcu = utf_traits::firstcodeunit(ucp) & utf_traits::bitsetmask;
+
+#if !defined(SRELLDBG_NO_BITSET)
+				this->firstchar_class_bs.set(firstcu);
+#endif
+
+#if !defined(SRELLDBG_NO_SCFINDER)
+				if (entrychar != constants::invalid_u32value)
+				{
+					if (entrychar != firstcu)
+					{
+						if (entrychar == constants::max_u32value)
+							entrychar = firstcu;
+						else
+							entrychar = constants::invalid_u32value;
+					}
+				}
+#endif
 
 				if (ucp == range.second)
 					break;
 			}
 #endif
 		}
+#if !defined(SRELLDBG_NO_SCFINDER)
+		this->NFA_states[0].character = entrychar;
+#endif
 	}
-#endif	//  !defined(SRELLDBG_NO_BITSET)
+#endif	//  !defined(SRELLDBG_NO_BITSET) || !defined(SRELLDBG_NO_SCFINDER)
 #endif	//  !defined(SRELLDBG_NO_1STCHRCLS)
 
 	bool gather_nextchars(range_pairs &nextcharclass, typename state_array::size_type pos, simple_array<bool> &checked, const uint_l32 bracket_number, const bool subsequent) const
@@ -19315,7 +19372,7 @@ private:
 	{
 		range_pairs nextcharclass1;
 
-		for (typename state_array::size_type pos = 0; pos < this->NFA_states.size(); ++pos)
+		for (state_size_type pos = 1; pos < this->NFA_states.size(); ++pos)
 		{
 			const state_type &state = this->NFA_states[pos];
 
@@ -19390,7 +19447,11 @@ private:
 			else
 				this->bmdata = new re_bmh<charT, utf_traits>;
 
+#if !defined(SRELLDBG_NO_SCFINDER)
+			this->bmdata->setup(u32s);
+#else
 			this->bmdata->setup(u32s, this->is_ricase());
+#endif
 			return /* false */;
 		}
 
@@ -19425,7 +19486,7 @@ private:
 		range_pairs basealt1stch;
 		range_pairs nextalt1stch;
 
-		for (state_size_type pos = 0; pos < this->NFA_states.size(); ++pos)
+		for (state_size_type pos = 1; pos < this->NFA_states.size(); ++pos)
 		{
 			const state_type &curstate = this->NFA_states[pos];
 
@@ -20664,50 +20725,82 @@ public:
 	{
 		results.clear_();
 
-//		results.sstate_.template init<utf_traits>(begin, end, lookbehind_limit, flags);
-		results.sstate_.init(begin, end, lookbehind_limit, flags);
-
-		if (results.sstate_.match_continuous_flag())
+		if (this->NFA_states.size())
 		{
-			if (this->NFA_states.size())
+//			results.sstate_.template init<utf_traits>(begin, end, lookbehind_limit, flags);
+			results.sstate_.init(begin, end, lookbehind_limit, flags);
+
+			results.sstate_.init_for_automaton(this->number_of_brackets, this->number_of_counters, this->number_of_repeats);
+
+			if (results.sstate_.match_continuous_flag())
 			{
 				results.sstate_.set_entrypoint(this->NFA_states[0].next_state2);
 				goto DO_SEARCH;
 			}
-		}
-		else
-#if !defined(SRELLDBG_NO_BMH)
-		if (this->bmdata)
-		{
-#if !defined(SRELL_NO_ICASE)
-			if (!this->is_ricase() ? this->bmdata->do_casesensitivesearch(results.sstate_, typename std::iterator_traits<BidirectionalIterator>::iterator_category()) : this->bmdata->do_icasesearch(results.sstate_, typename std::iterator_traits<BidirectionalIterator>::iterator_category()))
-#else
-			if (this->bmdata->do_casesensitivesearch(results.sstate_, typename std::iterator_traits<BidirectionalIterator>::iterator_category()))
-#endif
-				return results.set_match_results_bmh_();
-		}
-		else
-#endif
-		if (this->NFA_states.size())
-		{
-			results.sstate_.set_entrypoint(this->NFA_states[0].next_state1);
-
-			DO_SEARCH:
-			results.sstate_.init_for_automaton(this->number_of_brackets, this->number_of_counters, this->number_of_repeats);
-
-#if !defined(SRELL_NO_ICASE)
-			if (!this->is_ricase() ? do_search<false>(results) : do_search<true>(results))
-#else
-			if (do_search<false>(results))
-#endif
+			else
 			{
-#if !defined(SRELL_NO_NAMEDCAPTURE)
-				return results.set_match_results_(this->namedcaptures);
+				results.sstate_.set_entrypoint(this->NFA_states[0].next_state1);
+
+#if !defined(SRELLDBG_NO_SCFINDER)
+
+				if (this->NFA_states[0].character != constants::invalid_u32value)
+				{
+					if (is_contiguous(begin)
+						? (!this->is_ricase() ? do_search_mc<false>(results) : do_search_mc<true>(results))
+						: (!this->is_ricase() ? do_search_noncontiguous<false>(results) : do_search_noncontiguous<true>(results)))
+						goto FOUND;
+
+					goto NOT_FOUND;
+				}
+
+#endif	//  !defined(SRELLDBG_NO_SCFINDER)
+
+#if !defined(SRELLDBG_NO_BMH)
+				if (!this->bmdata)
+#endif
+				{
+					DO_SEARCH:
+
+#if !defined(SRELL_NO_ICASE)
+					if (!this->is_ricase() ? do_search<false>(results) : do_search<true>(results))
 #else
-				return results.set_match_results_();
+					if (do_search<false>(results))
+#endif
+					{
+#if !defined(SRELLDBG_NO_SCFINDER)
+						FOUND:
+#endif
+#if !defined(SRELL_NO_NAMEDCAPTURE)
+						return results.set_match_results_(this->namedcaptures);
+#else
+						return results.set_match_results_();
+#endif
+					}
+				}
+#if !defined(SRELLDBG_NO_BMH)
+				else
+				{
+#if defined(SRELLDBG_NO_SCFINDER)
+#if !defined(SRELL_NO_ICASE)
+					if (!this->is_ricase() ? this->bmdata->do_casesensitivesearch(results.sstate_, typename std::iterator_traits<BidirectionalIterator>::iterator_category()) : this->bmdata->do_icasesearch(results.sstate_, typename std::iterator_traits<BidirectionalIterator>::iterator_category()))
+#else
+					if (this->bmdata->do_casesensitivesearch(results.sstate_, typename std::iterator_traits<BidirectionalIterator>::iterator_category()))
+#endif	//  !defined(SRELL_NO_ICASE)
+
+#else	//  !defined(SRELLDBG_NO_SCFINDER)
+
+					if (this->bmdata->do_icasesearch(results.sstate_, typename std::iterator_traits<BidirectionalIterator>::iterator_category()))
+#endif	//  defined(SRELLDBG_NO_SCFINDER)
+					{
+						return results.set_match_results_bmh_();
+					}
+				}
 #endif
 			}
 		}
+#if !defined(SRELLDBG_NO_SCFINDER)
+		NOT_FOUND:
+#endif
 		return results.mark_as_failed_();
 	}
 
@@ -20764,6 +20857,134 @@ private:
 		}
 		return false;
 	}
+
+#if !defined(SRELLDBG_NO_SCFINDER)
+
+	template <const bool icase, typename ContiguousIterator>
+	bool do_search_mc(match_results<ContiguousIterator> &results) const
+	{
+		typedef typename std::iterator_traits<ContiguousIterator>::value_type char_type;
+		re_search_state<ContiguousIterator> &sstate = results.sstate_;
+		const ContiguousIterator searchend = sstate.nth.in_string;
+		const char_type ec = static_cast<char_type>(this->NFA_states[0].character);
+
+		for (;;)
+		{
+			if (sstate.nextpos >= searchend)
+				break;
+
+			sstate.nth.in_string = sstate.nextpos;
+
+			const char_type *const bgnpos = std::char_traits<char_type>::find(&*sstate.nextpos, sstate.srchend - sstate.nextpos, ec);
+
+			if (bgnpos)
+			{
+//				sstate.nth.in_string = bgnpos;
+				sstate.nth.in_string += bgnpos - &*sstate.nextpos;
+//				sstate.nextpos = bgnpos + 1;
+				sstate.nextpos = sstate.nth.in_string + 1;
+
+#if defined(SRELL_NO_LIMIT_COUNTER)
+				sstate.reset();
+#else
+				sstate.reset(this->limit_counter);
+#endif
+				if (run_automaton<icase, false>(sstate))
+					return true;
+			}
+			else
+			{
+				break;
+			}
+		}
+		return false;
+	}
+
+	template <const bool icase, typename BidirectionalIterator>
+	bool do_search_noncontiguous(match_results<BidirectionalIterator> &results) const
+	{
+		typedef typename std::iterator_traits<BidirectionalIterator>::value_type char_type;
+		re_search_state<BidirectionalIterator> &sstate = results.sstate_;
+		const BidirectionalIterator searchend = sstate.nth.in_string;
+		const char_type ec = static_cast<char_type>(this->NFA_states[0].character);
+
+		for (; sstate.nextpos != searchend;)
+		{
+			sstate.nth.in_string = find(sstate.nextpos, sstate.srchend, ec);
+
+			if (sstate.nth.in_string != sstate.srchend)
+			{
+				sstate.nextpos = sstate.nth.in_string;
+				++sstate.nextpos;
+
+#if defined(SRELL_NO_LIMIT_COUNTER)
+				sstate.reset();
+#else
+				sstate.reset(this->limit_counter);
+#endif
+				if (run_automaton<icase, false>(sstate))
+					return true;
+			}
+			else
+			{
+				break;
+			}
+		}
+		return false;
+	}
+
+	template <typename BidirectionalIterator, typename CharT0>
+	BidirectionalIterator find(BidirectionalIterator begin, const BidirectionalIterator end, const CharT0 c) const
+	{
+		for (; begin != end; ++begin)
+			if ((*begin & utf_traits::bitsetmask) == (c & utf_traits::bitsetmask))
+				break;
+
+		return begin;
+	}
+
+	template <typename BidirectionalIterator>
+	bool is_contiguous(BidirectionalIterator) const
+	{
+		return false;
+	}
+
+	template <typename CharT1>
+	bool is_contiguous(const CharT1 *) const
+	{
+		return true;
+	}
+
+	bool is_contiguous(std::string::const_iterator) const
+	{
+		return true;
+	}
+
+	bool is_contiguous(std::wstring::const_iterator) const
+	{
+		return true;
+	}
+
+#if defined(SRELL_CPP20_CHAR8_ENABLED)
+	bool is_contiguous(std::u8string::const_iterator) const
+	{
+		return true;
+	}
+#endif
+
+#if defined(SRELL_CPP11_CHAR1632_ENABLED)
+	bool is_contiguous(std::u16string::const_iterator) const
+	{
+		return true;
+	}
+
+	bool is_contiguous(std::u32string::const_iterator) const
+	{
+		return true;
+	}
+#endif
+
+#endif	//  !defined(SRELLDBG_NO_SCFINDER)
 
 	template <typename T, const bool>
 	struct casehelper
