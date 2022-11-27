@@ -1,17 +1,15 @@
-<!-- rem>
-::^^ The XML comment brackets prevent the .bat stub from showing up on the page
+<!DOCTYPE rem|
 @echo off
 if %os%==%os:/=/% goto desktop
-start cehta.exe %0
+start cehta.exe "%0"
 goto :eof
 :desktop
 for %%x in (system32 syswow64) do if exist "%SystemRoot%\%%x" set SystemLeaf=%%x
 start "%~n0" "%SystemRoot%\%SystemLeaf%\mshta.exe" "%~f0"
 goto :eof
--->
+>
+<?cehta-options dialogWidth=80; dialogHeight=50; resizable=yes; status=yes ?>
 <html>
-<![CDATA[
-<!-- ^^^ The CDATA tag helps ensure XML conformance for CEhta's happiness -->
 <head>
 <style>
 * { font: 14pt sans; }
@@ -28,6 +26,12 @@ Dim RegExpClass, count
 
 Sub WriteLine(text)
 	document.writeln text
+End Sub
+
+Sub BeginTest(text)
+	document.writeln text
+	On Error Resume Next ' fail gracefully when hosted in mshta
+	dialogArguments.status = text
 End Sub
 
 Function Test(str, exp, max, expected)
@@ -104,13 +108,13 @@ Function Main
 	WriteLine "RegExpClass = " & RegExpClass
 	WriteLine ""
 
-	WriteLine "Exception Test"
+	BeginTest "Exception Test"
 	str = "abc"
 	exp = "*"
 	num_of_tests_passed = num_of_tests_passed + TestError(str, exp)
 	num_of_tests = num_of_tests + 1
 
-	WriteLine "Test 1 (ECMAScript 2021 Language Specification 22.2.2.3, NOTE)"
+	BeginTest "Test 1 (ECMAScript 2021 Language Specification 22.2.2.3, NOTE)"
 	str = "abc"
 	exp = "((a)|(ab))((c)|(bc))"
 	ReDim expected(7)
@@ -124,7 +128,7 @@ Function Main
 	num_of_tests_passed = num_of_tests_passed + Test(str, exp, 1, expected)
 	num_of_tests = num_of_tests + 1
 
-	WriteLine "Test 2a (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 2)"
+	BeginTest "Test 2a (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 2)"
 	str = "abcdefghi"
 	exp = "a[a-z]{2,4}"
 	ReDim expected(1)
@@ -132,14 +136,14 @@ Function Main
 	num_of_tests_passed = num_of_tests_passed + Test(str, exp, 1, expected)
 	num_of_tests = num_of_tests + 1
 
-	WriteLine "Test 2b (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 2)"
+	BeginTest "Test 2b (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 2)"
 	str = "abcdefghi"
 	exp = "a[a-z]{2,4}?"
 	expected(0) = "abc"
 	num_of_tests_passed = num_of_tests_passed + Test(str, exp, 1, expected)
 	num_of_tests = num_of_tests + 1
 
-	WriteLine "Test 3 (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 2)"
+	BeginTest "Test 3 (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 2)"
 	str = "aabaac"
 	exp = "(aa|aabaac|ba|b|c)*"
 	ReDim expected(2)
@@ -148,7 +152,7 @@ Function Main
 	num_of_tests_passed = num_of_tests_passed + Test(str, exp, 1, expected)
 	num_of_tests = num_of_tests + 1
 
-	WriteLine "Test 4 (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 3)"
+	BeginTest "Test 4 (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 3)"
 	str = "zaacbbbcac"
 	exp = "(z)((a+)?(b+)?(c))*"
 	ReDim expected(6)
@@ -161,7 +165,7 @@ Function Main
 	num_of_tests_passed = num_of_tests_passed + Test(str, exp, 1, expected)
 	num_of_tests = num_of_tests + 1
 
-	WriteLine "Test 5a (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 4)"
+	BeginTest "Test 5a (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 4)"
 	str = "b"
 	exp = "(a*)*"
 	ReDim expected(2)
@@ -170,7 +174,7 @@ Function Main
 	num_of_tests_passed = num_of_tests_passed + Test(str, exp, 1, expected)
 	num_of_tests = num_of_tests + 1
 
-	WriteLine "Test 5b (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 4)"
+	BeginTest "Test 5b (ECMAScript 2021 Language Specification 22.2.2.5.1, NOTE 4)"
 	str = "baaaac"
 	exp = "(a*)b\1+"
 	expected(0) = "b"
@@ -178,7 +182,7 @@ Function Main
 	num_of_tests_passed = num_of_tests_passed + Test(str, exp, 1, expected)
 	num_of_tests = num_of_tests + 1
 
-	WriteLine "Test 6a (ECMAScript 2021 Language Specification 22.2.2.8.2, NOTE 2)"
+	BeginTest "Test 6a (ECMAScript 2021 Language Specification 22.2.2.8.2, NOTE 2)"
 	str = "baaabac"
 	exp = "(?=(a+))"
 	expected(0) = ""
@@ -186,7 +190,7 @@ Function Main
 	num_of_tests_passed = num_of_tests_passed + Test(str, exp, 1, expected)
 	num_of_tests = num_of_tests + 1
 
-	WriteLine "Test 6b (ECMAScript 2021 Language Specification 22.2.2.8.2, NOTE 2)"
+	BeginTest "Test 6b (ECMAScript 2021 Language Specification 22.2.2.8.2, NOTE 2)"
 	str = "baaabac"
 	exp = "(?=(a+))a*b\1"
 	expected(0) = "aba"
@@ -194,7 +198,7 @@ Function Main
 	num_of_tests_passed = num_of_tests_passed + Test(str, exp, 1, expected)
 	num_of_tests = num_of_tests + 1
 
-	WriteLine "Test 7 (ECMAScript 2021 Language Specification 22.2.2.8.2, NOTE 3)"
+	BeginTest "Test 7 (ECMAScript 2021 Language Specification 22.2.2.8.2, NOTE 3)"
 	str = "baaabaac"
 	exp = "(.*?)a(?!(a+)b\2c)\2(.*)"
 	ReDim expected(4)
@@ -205,7 +209,7 @@ Function Main
 	num_of_tests_passed = num_of_tests_passed + Test(str, exp, 1, expected)
 	num_of_tests = num_of_tests + 1
 
-	WriteLine "Test 8 (from https://github.com/tc39/test262/tree/master/test/built-ins/RegExp/lookBehind/misc.js)"
+	BeginTest "Test 8 (from https://github.com/tc39/test262/tree/master/test/built-ins/RegExp/lookBehind/misc.js)"
 	str = "abc"
 	exp = "(abc\1)"
 	ReDim expected(2)
@@ -216,7 +220,7 @@ Function Main
 
 	If count <> 0 Then
 
-		WriteLine "Benchmark 01"
+		BeginTest "Benchmark 01"
 		      '0123456'
 		str = "aaaabaa"
 		exp = "^(.*)*b\1$"
@@ -226,7 +230,7 @@ Function Main
 		num_of_benches_passed = num_of_benches_passed + Test(str, exp, count, expected)
 		num_of_benches = num_of_benches + 1
 
-		WriteLine "Benchmark 02"
+		BeginTest "Benchmark 02"
 		      '012345678'
 		str = "aaaabaaaa"
 		exp = "^(.*)*b\1\1$"
@@ -235,7 +239,7 @@ Function Main
 		num_of_benches_passed = num_of_benches_passed + Test(str, exp, count, expected)
 		num_of_benches = num_of_benches + 1
 
-		WriteLine "Benchmark 03"
+		BeginTest "Benchmark 03"
 		      '01'
 		str = "ab"
 		exp = "(.*?)*b\1"
@@ -244,7 +248,7 @@ Function Main
 		num_of_benches_passed = num_of_benches_passed + Test(str, exp, count * 10, expected)
 		num_of_benches = num_of_benches + 1
 
-		WriteLine "Benchmark 04"
+		BeginTest "Benchmark 04"
 		      '01234567'
 		str = "acaaabbb"
 		exp = "(a(.)a|\2(.)b){2}"
@@ -256,7 +260,7 @@ Function Main
 		num_of_benches_passed = num_of_benches_passed + Test(str, exp, count * 10, expected)
 		num_of_benches = num_of_benches + 1
 
-		WriteLine "Benchmark 05"
+		BeginTest "Benchmark 05"
 		str = "aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa"
 		exp = "(a*)(b)*\1\1\1"
 		ReDim expected(3)
@@ -266,7 +270,7 @@ Function Main
 		num_of_benches_passed = num_of_benches_passed + Test(str, exp, count, expected)
 		num_of_benches = num_of_benches + 1
 
-		WriteLine "Benchmark 06a"
+		BeginTest "Benchmark 06a"
 		str = "aaaaaaaaaab"
 		exp = "(.*)*b"
 		ReDim expected(2)
@@ -275,20 +279,20 @@ Function Main
 		num_of_benches_passed = num_of_benches_passed + Test(str, exp, count * 10, expected)
 		num_of_benches = num_of_benches + 1
 
-		WriteLine "Benchmark 06b"
+		BeginTest "Benchmark 06b"
 		str = "aaaaaaaaaab"
 		exp = "(.*)+b"
 		num_of_benches_passed = num_of_benches_passed + Test(str, exp, count * 10, expected)
 		num_of_benches = num_of_benches + 1
 
-		WriteLine "Benchmark 06c"
+		BeginTest "Benchmark 06c"
 		str = "aaaaaaaaaab"
 		exp = "(.*){2,}b"
 		expected(1) = ""
 		num_of_benches_passed = num_of_benches_passed + Test(str, exp, count * 10, expected)
 		num_of_benches = num_of_benches + 1
 
-		WriteLine "Benchmark 07"
+		BeginTest "Benchmark 07"
 		str = "aaaaaaaaaabc"
 		exp = "(?=(a+))(abc)"
 		ReDim expected(3)
@@ -298,7 +302,7 @@ Function Main
 		num_of_benches_passed = num_of_benches_passed + Test(str, exp, count, expected)
 		num_of_benches = num_of_benches + 1
 
-		WriteLine "Benchmark 08"
+		BeginTest "Benchmark 08"
 		str = "1234-5678-1234-456"
 		exp = "(\d{4}[-]){3}\d{3,4}"
 		ReDim expected(2)
@@ -307,7 +311,7 @@ Function Main
 		num_of_benches_passed = num_of_benches_passed + Test(str, exp, count * 5, expected)
 		num_of_benches = num_of_benches + 1
 
-		WriteLine "Benchmark 09"
+		BeginTest "Benchmark 09"
 		str = "aaaaaaaaaaaaaaaaaaaaa"
 		exp = "(.*)*b"
 		ReDim expected(0)
@@ -322,9 +326,10 @@ Function Main
 	Main = num_of_tests - num_of_tests_passed
 End Function
 
-Sub Run_OnClick
+Sub RunTest
 	RegExpClass = Replace("SRELL.RegExp", "SRELL", "VBScript", 1, BuiltinRegexp.checked)
 	count = CInt(Benchmark.value)
+	WriteLine "<title>Sample01 Test Results</title>"
 	WriteLine "<pre tabindex='0'>"
 	Main
 	WriteLine "</pre>"
@@ -343,8 +348,6 @@ End Sub
 	<input type='text' id='Benchmark' size='3' value='0'>
 </legend>
 </fieldset>
-<button id='Run'>Run test</button>
+<button onclick='RunTest'>Run test</button>
 </body>
-<comment>]]>
-<!-- ^^^ The <comment> tag prevents the ]]> from showing up on the page -->
 </html>
