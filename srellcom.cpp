@@ -10,9 +10,19 @@
  */
 
 #include <windows.h>
+
+#if defined(_WIN32_WCE) && (_WIN32_WCE < 0x600)
+// from bcap_core's stdint.h:
+#define WCHAR_MIN 0
+#define WCHAR_MAX 0xffff /* UINT16_MAX */
+// trivialized from ChakraCore's CommonPal.h:
+#define _countof(_Array) (sizeof(_Array) / sizeof(_Array[0]))
+#endif
+
 #if defined(_DEBUG) && !defined(_WIN32_WCE)
 #include "vld.h"
 #endif
+
 #define RE_PREFIX srell
 #include "srell.hpp"
 #include "srellcom_h.h"
@@ -46,7 +56,7 @@ static inline BOOL is_digit(WCHAR c)
 // Copyright (c) datadiode
 // SPDX-License-Identifier: MIT
 #define init_once(...) \
-    for (static LONG volatile static_init_once = 0;;) \
+    for (static LONG static_init_once = 0;;) \
     if (LONG init_once = InterlockedCompareExchange(&static_init_once, 1, 0)) \
     { if (init_once == 3) break; Sleep(static_cast<DWORD>(__VA_ARGS__.0)); } \
     else while (InterlockedIncrement(&static_init_once) == 2)
