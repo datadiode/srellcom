@@ -65,7 +65,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_WIN32_WCE=0x600;UNDER_CE=0x600"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
 				AdditionalIncludeDirectories="$(IntDir)"
 			/>
 			<Tool
@@ -147,7 +147,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_WIN32_WCE=0x600;UNDER_CE=0x600"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
 				AdditionalIncludeDirectories="$(IntDir)"
 			/>
 			<Tool
@@ -161,6 +161,170 @@
 				SubSystem="8"
 				ImportLibrary="$(IntDir)$(TargetName).lib"
 				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|STANDARDSDK_500 (x86)"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)\"
+			IntermediateDirectory="$(SolutionDir)$(ProjectName)\$(PlatformName)\$(ConfigurationName)\"
+			ConfigurationType="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+				CommandLine=""
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="1"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="0"
+				AdditionalIncludeDirectories=""
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;SRELL_NO_LOCALE;_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
+				StringPooling="true"
+				MinimalRebuild="false"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
+				AdditionalIncludeDirectories="$(IntDir)"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				LinkIncremental="1"
+				ModuleDefinitionFile="srellcom.def"
+				GenerateDebugInformation="true"
+				SubSystem="8"
+				ImportLibrary="$(IntDir)$(TargetName).lib"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|STANDARDSDK_500 (ARMV4I)"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)\"
+			IntermediateDirectory="$(SolutionDir)$(ProjectName)\$(PlatformName)\$(ConfigurationName)\"
+			ConfigurationType="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+				CommandLine=""
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="1"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="0"
+				AdditionalIncludeDirectories=""
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;SRELL_NO_LOCALE;_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
+				StringPooling="true"
+				MinimalRebuild="false"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
+				AdditionalIncludeDirectories="$(IntDir)"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				LinkIncremental="1"
+				ModuleDefinitionFile="srellcom.def"
+				GenerateDebugInformation="true"
+				SubSystem="8"
+				ImportLibrary="$(IntDir)$(TargetName).lib"
+				TargetMachine="16"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -229,7 +393,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_WIN32_WCE=0x600;UNDER_CE=0x600"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
 				AdditionalIncludeDirectories="$(IntDir)"
 			/>
 			<Tool
@@ -313,7 +477,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_WIN32_WCE=0x600;UNDER_CE=0x600"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
 				AdditionalIncludeDirectories="$(IntDir)"
 			/>
 			<Tool
@@ -327,88 +491,6 @@
 				SubSystem="8"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
-				ImportLibrary="$(IntDir)$(TargetName).lib"
-				TargetMachine="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles=""
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug|STANDARDSDK_500 (x86)"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)\"
-			IntermediateDirectory="$(SolutionDir)$(ProjectName)\$(PlatformName)\$(ConfigurationName)\"
-			ConfigurationType="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-				CommandLine=""
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TargetEnvironment="1"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
-				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;SRELL_NO_LOCALE;_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
-				StringPooling="true"
-				MinimalRebuild="false"
-				RuntimeLibrary="3"
-				UsePrecompiledHeader="0"
-				WarningLevel="3"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_WIN32_WCE=0x600;UNDER_CE=0x600"
-				AdditionalIncludeDirectories="$(IntDir)"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				LinkIncremental="1"
-				ModuleDefinitionFile="srellcom.def"
-				GenerateDebugInformation="true"
-				SubSystem="8"
 				ImportLibrary="$(IntDir)$(TargetName).lib"
 				TargetMachine="1"
 			/>
@@ -479,7 +561,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_WIN32_WCE=0x600;UNDER_CE=0x600"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
 				AdditionalIncludeDirectories="$(IntDir)"
 			/>
 			<Tool
@@ -495,88 +577,6 @@
 				EnableCOMDATFolding="2"
 				ImportLibrary="$(IntDir)$(TargetName).lib"
 				TargetMachine="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles=""
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug|STANDARDSDK_500 (ARMV4I)"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)\"
-			IntermediateDirectory="$(SolutionDir)$(ProjectName)\$(PlatformName)\$(ConfigurationName)\"
-			ConfigurationType="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-				CommandLine=""
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TargetEnvironment="1"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
-				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;SRELL_NO_LOCALE;_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
-				StringPooling="true"
-				MinimalRebuild="false"
-				RuntimeLibrary="3"
-				UsePrecompiledHeader="0"
-				WarningLevel="3"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_WIN32_WCE=0x600;UNDER_CE=0x600"
-				AdditionalIncludeDirectories="$(IntDir)"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				LinkIncremental="1"
-				ModuleDefinitionFile="srellcom.def"
-				GenerateDebugInformation="true"
-				SubSystem="8"
-				ImportLibrary="$(IntDir)$(TargetName).lib"
-				TargetMachine="16"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -645,7 +645,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_WIN32_WCE=0x600;UNDER_CE=0x600"
+				PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE=$(CEVER);$(_ARCHFAM_)"
 				AdditionalIncludeDirectories="$(IntDir)"
 			/>
 			<Tool
